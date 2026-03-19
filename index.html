@@ -96,6 +96,28 @@
     .controls-hint { color: #555; font-size: 0.7em; margin-top: 12px; text-align: center; line-height: 1.8; }
     .controls-hint span { color: #ffcc00; }
 
+    .career-banner {
+      display: flex; gap: 20px; align-items: center; justify-content: center;
+      margin-bottom: 10px; padding: 8px 20px;
+      background: rgba(255,255,255,0.03); border: 1px solid #222; border-radius: 10px;
+    }
+    .career-stat { text-align: center; }
+    .career-stat .c-val { font-size: 1.3em; font-weight: bold; }
+    .career-stat .c-label { font-size: 0.6em; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+    .career-stat.wins .c-val { color: #00ff9d; }
+    .career-stat.losses .c-val { color: #ff6b6b; }
+    .career-stat.perfects .c-val { color: #ffd700; }
+    .career-stat.combo .c-val { color: #00ffff; }
+    .career-stat.streak .c-val { color: #ff1493; }
+    .career-divider { width: 1px; height: 30px; background: #333; }
+    .roster-card .r-record { font-size: 0.55em; color: #555; margin-top: 2px; }
+    .reset-btn {
+      background: none; border: 1px solid #333; color: #444; font-size: 0.6em;
+      padding: 3px 10px; border-radius: 6px; cursor: pointer; margin-left: 10px;
+      transition: all 0.2s;
+    }
+    .reset-btn:hover { border-color: #ff4444; color: #ff4444; }
+
     /* Pause overlay */
     #pause-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -191,10 +213,12 @@
 <div id="select-overlay">
   <h1>COIN CLASH</h1>
   <div class="subtitle">MORTAL MEME COMBAT</div>
+  <div class="career-banner" id="career-banner"></div>
   <div class="diff-row" id="diff-row">
     <button class="diff-btn" data-diff="0" onclick="setDifficulty(0)">Easy</button>
     <button class="diff-btn active" data-diff="1" onclick="setDifficulty(1)">Normal</button>
     <button class="diff-btn" data-diff="2" onclick="setDifficulty(2)">Hard</button>
+    <button class="reset-btn" onclick="resetStats()">Reset Stats</button>
   </div>
   <div class="roster" id="roster"></div>
   <div class="fighter-preview" id="fighter-preview"></div>
@@ -325,9 +349,6 @@ function playSound(type, vol = 0.3) {
 
 // ====================== FIGHTER RENDERING ======================
 // Each fighter has a custom draw function that creates a unique character
-
-const tinkclawImg = new Image();
-tinkclawImg.src = 'tinkclaw.png';
 
 function drawFighterBody(ctx, x, y, w, h, data, state, frame, facing, armExt, legExt, blocking, shielded) {
   ctx.save();
@@ -498,7 +519,7 @@ function drawPepe(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, frame
   ctx.strokeStyle = '#2d8632'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(x, headY + 4, 14, 0.1, Math.PI - 0.1); ctx.stroke();
   ctx.fillStyle = '#ff69b4';
-  ctx.beginPath(); ctx.ellipse(x, headY + 12, 10, 3, 0, Math.PI); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x, headY + 12, 10, 3, 0, 0, Math.PI); ctx.fill();
 }
 
 function drawShib(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, frame) {
@@ -770,22 +791,15 @@ function drawTinkClaw(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, f
     ctx.shadowBlur = 0;
   }
   const headY = bodyY - 26 + breathe;
-  if (tinkclawImg.complete && tinkclawImg.naturalWidth > 0) {
-    const imgSize = 44;
-    ctx.shadowColor = '#ff1493'; ctx.shadowBlur = 12;
-    ctx.drawImage(tinkclawImg, x - imgSize / 2, headY - imgSize / 2 - 4, imgSize, imgSize);
-    ctx.shadowBlur = 0;
-  } else {
-    ctx.fillStyle = '#1a0030'; ctx.strokeStyle = '#ff1493'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(x, headY, 18, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 8; ctx.fillStyle = '#00ffff';
-    ctx.beginPath(); ctx.arc(x - 7, headY - 3, 4, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 7, headY - 3, 4, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ff1493';
-    ctx.beginPath(); ctx.arc(x - 7, headY - 3, 2, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 7, headY - 3, 2, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0;
-  }
+  ctx.fillStyle = '#1a0030'; ctx.strokeStyle = '#ff1493'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, headY, 18, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 8; ctx.fillStyle = '#00ffff';
+  ctx.beginPath(); ctx.arc(x - 7, headY - 3, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 7, headY - 3, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ff1493';
+  ctx.beginPath(); ctx.arc(x - 7, headY - 3, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 7, headY - 3, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
   ctx.strokeStyle = '#ff1493'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(x, headY - 22); ctx.lineTo(x, headY - 34); ctx.stroke();
   ctx.shadowColor = '#ff1493'; ctx.shadowBlur = 8; ctx.fillStyle = '#ff1493';
@@ -1306,18 +1320,19 @@ function drawHUD() {
   // Controls bar at bottom
   if (!isTouchDevice) {
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, H - 22, W, 22);
-    ctx.font = '11px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#555';
-    const controls = [
-      ['A/D', 'Move'], ['W', 'Jump'], ['S', 'Crouch'],
-      ['J', 'Punch'], ['K', 'Kick'], ['L', 'Special'],
-      ['Space', 'Block'], ['J+K', 'Finish'], ['Esc', 'Pause']
-    ];
-    const totalW = controls.length * 80;
-    const startX = (W - totalW) / 2 + 40;
-    controls.forEach((c, i) => {
-      const cx = startX + i * 80;
-      ctx.fillStyle = '#ffcc00'; ctx.fillText(c[0], cx - 2, H - 8);
-      ctx.fillStyle = '#666'; ctx.fillText(' ' + c[1], cx + ctx.measureText(c[0]).width / 2 + 2, H - 8);
+    ctx.font = '10px Arial'; ctx.textAlign = 'center';
+    const controls = ['A/D Move','W Jump','S Crouch','J Punch','K Kick','L Special','Space Block','J+K Finish','Esc Pause'];
+    const gap = Math.min(W / controls.length, 110);
+    const startX = (W - gap * controls.length) / 2 + gap / 2;
+    controls.forEach((txt, i) => {
+      const parts = txt.split(' ');
+      const cx = startX + i * gap;
+      const keyW = ctx.measureText(parts[0]).width;
+      const fullW = keyW + 4 + ctx.measureText(parts[1]).width;
+      ctx.fillStyle = '#ffcc00'; ctx.textAlign = 'right';
+      ctx.fillText(parts[0], cx - fullW / 2 + keyW, H - 7);
+      ctx.fillStyle = '#666'; ctx.textAlign = 'left';
+      ctx.fillText(parts[1], cx - fullW / 2 + keyW + 4, H - 7);
     });
   }
 }
@@ -1345,6 +1360,7 @@ const AI_AGGRO = [0.7, 1.0, 1.4]; // attack probability multiplier
 function setDifficulty(d) {
   difficulty = d;
   document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.diff) === d));
+  career.difficulty = d; saveCareer();
   playSound('select', 0.2);
 }
 
@@ -1381,6 +1397,8 @@ function quitToSelect() {
   document.getElementById('victory-overlay').classList.remove('show');
   gameState = STATE.SELECT;
   document.getElementById('select-overlay').classList.remove('hidden');
+  updateCareerBanner();
+  buildSelect();
 }
 
 function handleInput() {
@@ -1431,23 +1449,33 @@ function endRound(p1Won) {
 
 function showVictory() {
   const p1Won = p1Rounds >= 2;
+  const isPerfect = p1Won && p1.hp === p1.maxHp;
   const winner = p1Won ? p1 : p2;
   const titleEl = document.getElementById('victory-title');
   titleEl.textContent = `${winner.data.name.toUpperCase()} WINS!`;
   titleEl.style.color = p1Won ? '#00ff9d' : '#ff6b6b';
-  document.getElementById('victory-sub').textContent = p1Won ? 'VICTORY' : 'DEFEAT';
+  document.getElementById('victory-sub').textContent = p1Won ? (isPerfect ? 'FLAWLESS VICTORY' : 'VICTORY') : 'DEFEAT';
 
+  // Record to career
+  recordMatch(p1Won, isPerfect, p1.maxCombo, p1.totalDmgDealt);
+
+  const rec = getFighterRecord(selectedFighter.id);
   const statsHTML = `
     <div class="s-key">Hits Landed</div><div class="s-val" style="color:#00ff9d">${p1.hitsLanded}</div>
     <div class="s-key">Damage Dealt</div><div class="s-val" style="color:#00ff9d">${p1.totalDmgDealt}</div>
     <div class="s-key">Max Combo</div><div class="s-val" style="color:#ffcc00">${p1.maxCombo}</div>
     <div class="s-key">HP Remaining</div><div class="s-val" style="color:${p1.hp > 0 ? '#00ff9d' : '#ff4444'}">${Math.max(0, Math.round(p1.hp))}</div>
+    <div class="s-key" style="grid-column:1/-1;border-top:1px solid #222;padding-top:6px;margin-top:4px;color:#555;font-size:0.7em">CAREER</div><div></div>
+    <div class="s-key">Record</div><div class="s-val" style="color:#888">${career.wins}W - ${career.losses}L</div>
+    <div class="s-key">${selectedFighter.name} Record</div><div class="s-val" style="color:${selectedFighter.color}">${rec.w}W - ${rec.l}L</div>
+    <div class="s-key">Win Streak</div><div class="s-val" style="color:#ff1493">${career.currentStreak > 1 ? career.currentStreak + ' (active)' : career.winStreak + ' (best)'}</div>
+    <div class="s-key">Total Damage</div><div class="s-val" style="color:#888">${career.totalDmg.toLocaleString()}</div>
   `;
   document.getElementById('victory-stats').innerHTML = statsHTML;
   document.getElementById('victory-overlay').classList.add('show');
 
   // Confetti
-  spawnConfetti(W / 2, H / 3, 40);
+  spawnConfetti(W / 2, H / 3, p1Won ? 50 : 15);
   if (p1Won) playSound('announce', 0.4);
 }
 
@@ -1604,6 +1632,74 @@ const FIGHTERS = [
   }
 ];
 
+// ====================== LOCAL STORAGE ======================
+const STORAGE_KEY = 'coinclash_career';
+function defaultCareer() {
+  return {
+    wins: 0, losses: 0, perfects: 0, bestCombo: 0, totalDmg: 0, winStreak: 0, currentStreak: 0,
+    fighters: {}, difficulty: 1, lastFighter: null
+  };
+}
+function loadCareer() {
+  try { const d = JSON.parse(localStorage.getItem(STORAGE_KEY)); return d ? { ...defaultCareer(), ...d } : defaultCareer(); }
+  catch(e) { return defaultCareer(); }
+}
+function saveCareer() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(career)); } catch(e) {}
+}
+function getFighterRecord(id) {
+  if (!career.fighters[id]) career.fighters[id] = { w: 0, l: 0 };
+  return career.fighters[id];
+}
+function recordMatch(p1Won, isPerfect, maxCombo, dmgDealt) {
+  if (p1Won) {
+    career.wins++;
+    career.currentStreak++;
+    if (career.currentStreak > career.winStreak) career.winStreak = career.currentStreak;
+    if (isPerfect) career.perfects++;
+    getFighterRecord(selectedFighter.id).w++;
+  } else {
+    career.losses++;
+    career.currentStreak = 0;
+    getFighterRecord(selectedFighter.id).l++;
+  }
+  if (maxCombo > career.bestCombo) career.bestCombo = maxCombo;
+  career.totalDmg += dmgDealt;
+  career.lastFighter = selectedFighter.id;
+  career.difficulty = difficulty;
+  saveCareer();
+}
+function resetStats() {
+  if (!confirm('Reset all career stats?')) return;
+  Object.assign(career, defaultCareer());
+  saveCareer();
+  updateCareerBanner();
+  buildSelect();
+}
+function updateCareerBanner() {
+  const el = document.getElementById('career-banner');
+  const winRate = career.wins + career.losses > 0 ? Math.round(career.wins / (career.wins + career.losses) * 100) : 0;
+  el.innerHTML = `
+    <div class="career-stat wins"><div class="c-val">${career.wins}</div><div class="c-label">Wins</div></div>
+    <div class="career-divider"></div>
+    <div class="career-stat losses"><div class="c-val">${career.losses}</div><div class="c-label">Losses</div></div>
+    <div class="career-divider"></div>
+    <div class="career-stat perfects"><div class="c-val">${career.perfects}</div><div class="c-label">Perfects</div></div>
+    <div class="career-divider"></div>
+    <div class="career-stat combo"><div class="c-val">${career.bestCombo}</div><div class="c-label">Best Combo</div></div>
+    <div class="career-divider"></div>
+    <div class="career-stat streak"><div class="c-val">${career.winStreak}</div><div class="c-label">Best Streak</div></div>
+    ${career.wins + career.losses > 0 ? `<div class="career-divider"></div><div class="career-stat"><div class="c-val" style="color:#888">${winRate}%</div><div class="c-label">Win Rate</div></div>` : ''}
+  `;
+}
+
+let career = loadCareer();
+// Restore saved difficulty
+if (career.difficulty !== undefined) {
+  difficulty = career.difficulty;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.diff) === difficulty));
+}
+
 // ====================== SELECT SCREEN ======================
 function drawMiniChar(cvs, data) {
   const c = cvs.getContext('2d');
@@ -1633,6 +1729,15 @@ function buildSelect() {
     const typeDiv = document.createElement('div');
     typeDiv.className = 'r-type'; typeDiv.textContent = f.type;
     card.appendChild(typeDiv);
+
+    // W/L record
+    const rec = getFighterRecord(f.id);
+    if (rec.w + rec.l > 0) {
+      const recDiv = document.createElement('div');
+      recDiv.className = 'r-record';
+      recDiv.textContent = `${rec.w}W - ${rec.l}L`;
+      card.appendChild(recDiv);
+    }
 
     // Stat bars
     const statsDiv = document.createElement('div');
@@ -1720,7 +1825,13 @@ if (isTouchDevice) {
   });
 }
 
+// Init: restore last fighter, show career
+updateCareerBanner();
 buildSelect();
+if (career.lastFighter) {
+  const last = FIGHTERS.find(f => f.id === career.lastFighter);
+  if (last) selectFighter(last);
+}
 gameLoop();
 </script>
 </body>
