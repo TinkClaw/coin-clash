@@ -118,6 +118,59 @@
     }
     .reset-btn:hover { border-color: #ff4444; color: #ff4444; }
 
+    .mode-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .mode-btn {
+      padding: 5px 18px; font-size: 0.8em; font-weight: bold; color: #888;
+      background: rgba(255,255,255,0.04); border: 1px solid #333; border-radius: 8px;
+      cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px;
+    }
+    .mode-btn:hover { border-color: #ff1493; color: #ff69b4; }
+    .mode-btn.active { border-color: #ff1493; color: #ff1493; background: rgba(255,20,147,0.08); box-shadow: 0 0 12px rgba(255,20,147,0.2); }
+
+    .mute-btn {
+      position: fixed; top: 12px; right: 12px; z-index: 300;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255,255,255,0.06); border: 1px solid #333;
+      color: #888; font-size: 16px; cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mute-btn:hover { border-color: #ff1493; color: #ff1493; }
+    .mute-btn.muted { color: #ff4444; border-color: #ff4444; }
+
+    .roster-card.locked {
+      opacity: 0.35; pointer-events: none; position: relative;
+      filter: grayscale(0.7);
+    }
+    .roster-card.locked::after {
+      content: '🔒'; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); font-size: 1.8em;
+      filter: grayscale(0) drop-shadow(0 0 8px #ff1493);
+    }
+    .unlock-msg {
+      font-size: 0.65em; color: #ff1493; margin-top: 2px;
+      text-align: center; max-width: 850px; width: 100%;
+    }
+
+    .share-btn {
+      padding: 10px 30px; font-size: 0.9em; font-weight: bold; color: #fff;
+      background: #1da1f2; border: none; border-radius: 10px;
+      cursor: pointer; margin: 6px; transition: all 0.2s; letter-spacing: 1px;
+    }
+    .share-btn:hover { background: #0d8ecf; transform: scale(1.03); }
+
+    .tkcl-footer {
+      margin-top: 10px; font-size: 0.6em; color: #333; text-align: center;
+      letter-spacing: 1px;
+    }
+    .tkcl-footer a { color: #ff1493; text-decoration: none; }
+    .tkcl-footer a:hover { text-decoration: underline; }
+
+    .p2-hint {
+      font-size: 0.7em; color: #ff6b6b; margin-top: 4px;
+      text-align: center; line-height: 1.6;
+    }
+    .p2-hint span { color: #ffcc00; }
+
     /* Pause overlay */
     #pause-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -210,25 +263,36 @@
 </head>
 <body>
 
+<button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle Sound">&#9834;</button>
+
 <div id="select-overlay">
   <h1>COIN CLASH</h1>
   <div class="subtitle">MORTAL MEME COMBAT</div>
   <div class="career-banner" id="career-banner"></div>
+  <div class="mode-row">
+    <button class="mode-btn active" data-mode="1p" onclick="setMode('1p')">1P vs AI</button>
+    <button class="mode-btn" data-mode="2p" onclick="setMode('2p')">2P Local</button>
+  </div>
   <div class="diff-row" id="diff-row">
     <button class="diff-btn" data-diff="0" onclick="setDifficulty(0)">Easy</button>
     <button class="diff-btn active" data-diff="1" onclick="setDifficulty(1)">Normal</button>
     <button class="diff-btn" data-diff="2" onclick="setDifficulty(2)">Hard</button>
     <button class="reset-btn" onclick="resetStats()">Reset Stats</button>
   </div>
+  <div class="unlock-msg" id="unlock-msg"></div>
   <div class="roster" id="roster"></div>
   <div class="fighter-preview" id="fighter-preview"></div>
   <div class="moves-preview" id="moves-preview"></div>
   <button class="fight-btn" id="fight-btn" disabled onclick="startFight()">SELECT A FIGHTER</button>
-  <div class="controls-hint">
+  <div class="controls-hint" id="controls-hint">
     <span>A/D</span> Move &nbsp; <span>W</span> Jump &nbsp; <span>S</span> Crouch &nbsp;
     <span>J</span> Punch &nbsp; <span>K</span> Kick &nbsp; <span>L</span> Special &nbsp;
     <span>Space</span> Block &nbsp; <span>J+K</span> Finisher (when FINISH HIM!) &nbsp; <span>Esc</span> Pause
   </div>
+  <div class="p2-hint" id="p2-hint" style="display:none">
+    P2: <span>Arrows</span> Move &nbsp; <span>Num1</span> Punch &nbsp; <span>Num2</span> Kick &nbsp; <span>Num3</span> Special &nbsp; <span>Num0</span> Block
+  </div>
+  <div class="tkcl-footer">Powered by <a href="https://tinkclaw.com" target="_blank">TinkClaw</a> &mdash; $TKCL</div>
 </div>
 
 <div id="pause-overlay">
@@ -241,8 +305,11 @@
   <h2 id="victory-title"></h2>
   <div class="victory-sub" id="victory-sub"></div>
   <div class="stats-grid" id="victory-stats"></div>
-  <button class="pause-btn" onclick="rematch()" style="background:linear-gradient(135deg,#ff1493,#9d00ff);border-color:#ff1493;">Rematch</button>
-  <button class="pause-btn" onclick="quitToSelect()">New Fighter</button>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+    <button class="pause-btn" onclick="rematch()" style="background:linear-gradient(135deg,#ff1493,#9d00ff);border-color:#ff1493;">Rematch</button>
+    <button class="share-btn" onclick="shareResults()">Share on X</button>
+    <button class="pause-btn" onclick="quitToSelect()">New Fighter</button>
+  </div>
 </div>
 
 <canvas id="game"></canvas>
@@ -266,9 +333,17 @@
 // ====================== SOUND ENGINE ======================
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
+let muted = false;
 function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+function toggleMute() {
+  muted = !muted;
+  const btn = document.getElementById('mute-btn');
+  btn.classList.toggle('muted', muted);
+  btn.innerHTML = muted ? '&#9854;' : '&#9834;';
+}
 
 function playSound(type, vol = 0.3) {
+  if (muted) return;
   try {
     ensureAudio();
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -1364,6 +1439,17 @@ function setDifficulty(d) {
   playSound('select', 0.2);
 }
 
+// Game mode
+let gameMode = '1p'; // '1p' or '2p'
+let p2SelectedFighter = null;
+function setMode(m) {
+  gameMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  document.getElementById('diff-row').style.display = m === '2p' ? 'none' : 'flex';
+  document.getElementById('p2-hint').style.display = m === '2p' ? 'block' : 'none';
+  playSound('select', 0.2);
+}
+
 const STATE = { SELECT: 0, INTRO: 1, FIGHT: 2, ROUND_END: 3, MATCH_END: 4 };
 let gameState = STATE.SELECT, selectedFighter = null, enemyFighter = null;
 let p1, p2, screenShake = 0, slowMo = 0;
@@ -1376,7 +1462,7 @@ let paused = false;
 const keys = {};
 document.addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
-  if ([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(e.key.toLowerCase())) e.preventDefault();
+  if ([' ','arrowup','arrowdown','arrowleft','arrowright','0','1','2','3'].includes(e.key.toLowerCase())) e.preventDefault();
   if (e.key === 'Escape') {
     if (gameState >= STATE.INTRO && gameState <= STATE.FIGHT) togglePause();
   }
@@ -1393,39 +1479,63 @@ function togglePause() {
 }
 function quitToSelect() {
   paused = false;
+  p2SelectedFighter = null;
   document.getElementById('pause-overlay').classList.remove('show');
   document.getElementById('victory-overlay').classList.remove('show');
   gameState = STATE.SELECT;
   document.getElementById('select-overlay').classList.remove('hidden');
+  if (isTouchDevice) document.getElementById('touch-controls').style.display = 'none';
   updateCareerBanner();
   buildSelect();
 }
 
 function handleInput() {
-  if (p1.state === 'ko' || p1.state === 'finishable') return;
-  const canMove = ['idle','walk','jump'].includes(p1.state);
-  const canAct = canMove || p1.state === 'crouch';
-  p1.blocking = keys[' '] && canMove;
-  if (canMove && !p1.blocking) {
-    if (keys['a'] || keys['arrowleft']) { p1.x -= p1.data.spd; if (p1.onGround) p1.state = 'walk'; }
-    else if (keys['d'] || keys['arrowright']) { p1.x += p1.data.spd; if (p1.onGround) p1.state = 'walk'; }
-    else if (p1.onGround && p1.state === 'walk') p1.state = 'idle';
-    if ((keys['w'] || keys['arrowup']) && p1.onGround) { p1.vy = -11; p1.y -= 1; p1.state = 'jump'; }
+  // P1 always uses WASD + JKL
+  if (p1.state !== 'ko' && p1.state !== 'finishable') {
+    const canMove = ['idle','walk','jump'].includes(p1.state);
+    const canAct = canMove || p1.state === 'crouch';
+    p1.blocking = keys[' '] && canMove;
+    if (canMove && !p1.blocking) {
+      if (keys['a']) { p1.x -= p1.data.spd; if (p1.onGround) p1.state = 'walk'; }
+      else if (keys['d']) { p1.x += p1.data.spd; if (p1.onGround) p1.state = 'walk'; }
+      else if (p1.onGround && p1.state === 'walk') p1.state = 'idle';
+      if (keys['w'] && p1.onGround) { p1.vy = -11; p1.y -= 1; p1.state = 'jump'; }
+    }
+    if (keys['s'] && p1.onGround && canMove) p1.state = 'crouch';
+    else if (p1.state === 'crouch' && !keys['s']) p1.state = 'idle';
+    if (canAct) {
+      if (keys['j'] && keys['k'] && p2.state === 'finishable') { p1.finisherReady = true; p1.startMove('finisher'); }
+      else if (keys['j']) p1.startMove('punch');
+      else if (keys['k']) p1.startMove('kick');
+      else if (keys['l']) p1.startMove('special');
+    }
   }
-  if ((keys['s'] || keys['arrowdown']) && p1.onGround && canMove) p1.state = 'crouch';
-  else if (p1.state === 'crouch' && !(keys['s'] || keys['arrowdown'])) p1.state = 'idle';
-  if (canAct) {
-    if (keys['j'] && keys['k'] && p2.state === 'finishable') { p1.finisherReady = true; p1.startMove('finisher'); }
-    else if (keys['j']) p1.startMove('punch');
-    else if (keys['k']) p1.startMove('kick');
-    else if (keys['l']) p1.startMove('special');
+  // P2 uses arrows + numpad (only in 2P mode)
+  if (gameMode === '2p' && p2.state !== 'ko' && p2.state !== 'finishable') {
+    const canMove = ['idle','walk','jump'].includes(p2.state);
+    const canAct = canMove || p2.state === 'crouch';
+    p2.blocking = keys['0'] && canMove; // numpad 0
+    if (canMove && !p2.blocking) {
+      if (keys['arrowleft']) { p2.x -= p2.data.spd; if (p2.onGround) p2.state = 'walk'; }
+      else if (keys['arrowright']) { p2.x += p2.data.spd; if (p2.onGround) p2.state = 'walk'; }
+      else if (p2.onGround && p2.state === 'walk') p2.state = 'idle';
+      if (keys['arrowup'] && p2.onGround) { p2.vy = -11; p2.y -= 1; p2.state = 'jump'; }
+    }
+    if (keys['arrowdown'] && p2.onGround && canMove) p2.state = 'crouch';
+    else if (p2.state === 'crouch' && !keys['arrowdown']) p2.state = 'idle';
+    if (canAct) {
+      if (keys['1'] && keys['2'] && p1.state === 'finishable') { p2.finisherReady = true; p2.startMove('finisher'); }
+      else if (keys['1']) p2.startMove('punch');
+      else if (keys['2']) p2.startMove('kick');
+      else if (keys['3']) p2.startMove('special');
+    }
   }
 }
 
 function startRound() {
   gameState = STATE.INTRO;
   p1 = new Fighter(selectedFighter, W * 0.25, 1, false);
-  p2 = new Fighter(enemyFighter, W * 0.75, -1, true);
+  p2 = new Fighter(enemyFighter, W * 0.75, -1, gameMode === '1p');
   projectiles = []; particles = [];
   screenShake = 0; comboCount = 0; comboTimer = 0;
   matchTimer = 99; matchTimerAccum = 0;
@@ -1637,7 +1747,7 @@ const STORAGE_KEY = 'coinclash_career';
 function defaultCareer() {
   return {
     wins: 0, losses: 0, perfects: 0, bestCombo: 0, totalDmg: 0, winStreak: 0, currentStreak: 0,
-    fighters: {}, difficulty: 1, lastFighter: null
+    fighters: {}, difficulty: 1, lastFighter: null, beaten: []
   };
 }
 function loadCareer() {
@@ -1658,6 +1768,11 @@ function recordMatch(p1Won, isPerfect, maxCombo, dmgDealt) {
     if (career.currentStreak > career.winStreak) career.winStreak = career.currentStreak;
     if (isPerfect) career.perfects++;
     getFighterRecord(selectedFighter.id).w++;
+    // Track beaten opponents for boss unlock
+    if (!career.beaten) career.beaten = [];
+    if (enemyFighter && !career.beaten.includes(enemyFighter.id)) {
+      career.beaten.push(enemyFighter.id);
+    }
   } else {
     career.losses++;
     career.currentStreak = 0;
@@ -1668,6 +1783,26 @@ function recordMatch(p1Won, isPerfect, maxCombo, dmgDealt) {
   career.lastFighter = selectedFighter.id;
   career.difficulty = difficulty;
   saveCareer();
+}
+function isBossUnlocked() {
+  if (!career.beaten) career.beaten = [];
+  const nonBoss = FIGHTERS.filter(f => !f.boss).map(f => f.id);
+  return nonBoss.every(id => career.beaten.includes(id));
+}
+function shareResults() {
+  const p1Won = p1Rounds >= 2;
+  const fighter = selectedFighter.name;
+  const result = p1Won ? 'won' : 'lost';
+  const combo = p1.maxCombo;
+  const streak = career.currentStreak;
+  let text = `I just ${result} as ${fighter} in Coin Clash!`;
+  if (p1Won && combo >= 3) text += ` ${combo}-hit combo!`;
+  if (p1Won && streak >= 3) text += ` ${streak} win streak!`;
+  if (p1Won && p1.hp === p1.maxHp) text += ' FLAWLESS!';
+  text += '\n\nPlay free: tinkclaw.com/coinclash';
+  text += '\n$TKCL';
+  const url = 'https://x.com/intent/tweet?text=' + encodeURIComponent(text);
+  window.open(url, '_blank', 'width=550,height=420');
 }
 function resetStats() {
   if (!confirm('Reset all career stats?')) return;
@@ -1715,11 +1850,23 @@ function buildSelect() {
   const maxSpd = Math.max(...FIGHTERS.map(f => f.spd));
   const maxDef = Math.max(...FIGHTERS.map(f => f.def));
   const maxAtk = Math.max(...FIGHTERS.map(f => f.moves.punch.dmg + f.moves.kick.dmg + f.moves.special.dmg));
+  const bossOpen = isBossUnlocked();
+
+  // Unlock message
+  const unlockEl = document.getElementById('unlock-msg');
+  if (!bossOpen) {
+    const nonBoss = FIGHTERS.filter(f => !f.boss).map(f => f.id);
+    const beaten = (career.beaten || []).filter(id => nonBoss.includes(id));
+    unlockEl.textContent = `Beat all 8 fighters to unlock the boss (${beaten.length}/8)`;
+  } else {
+    unlockEl.textContent = '';
+  }
 
   FIGHTERS.forEach(f => {
+    const locked = f.boss && !bossOpen;
     const card = document.createElement('div');
-    card.className = 'roster-card' + (f.boss ? ' boss' : '') + (selectedFighter?.id === f.id ? ' sel' : '');
-    card.onclick = () => selectFighter(f);
+    card.className = 'roster-card' + (f.boss ? ' boss' : '') + (selectedFighter?.id === f.id ? ' sel' : '') + (locked ? ' locked' : '');
+    card.onclick = locked ? null : () => selectFighter(f);
     const cvs = document.createElement('canvas');
     cvs.width = 70; cvs.height = 70;
     card.appendChild(cvs);
@@ -1762,9 +1909,21 @@ function buildSelect() {
 }
 
 function selectFighter(f) {
-  selectedFighter = f;
-  const pool = FIGHTERS.filter(c => c.id !== f.id);
-  enemyFighter = pool[Math.floor(Math.random() * pool.length)];
+  // In 2P mode: first click = P1, second click = P2
+  if (gameMode === '2p' && selectedFighter && selectedFighter.id !== f.id && !p2SelectedFighter) {
+    p2SelectedFighter = f;
+    enemyFighter = f;
+  } else {
+    selectedFighter = f;
+    p2SelectedFighter = null;
+    if (gameMode === '1p') {
+      const bossOpen = isBossUnlocked();
+      const pool = FIGHTERS.filter(c => c.id !== f.id && (!c.boss || bossOpen));
+      enemyFighter = pool[Math.floor(Math.random() * pool.length)];
+    } else {
+      enemyFighter = null; // Wait for P2 pick
+    }
+  }
   buildSelect();
   playSound('select', 0.2);
 
@@ -1773,9 +1932,9 @@ function selectFighter(f) {
   const pb1 = document.createElement('div'); pb1.className = 'preview-box';
   const pc1 = document.createElement('canvas'); pc1.width = 120; pc1.height = 120;
   pb1.appendChild(pc1);
-  const pn1 = document.createElement('div'); pn1.className = 'p-name'; pn1.style.color = f.color; pn1.textContent = f.name;
+  const pn1 = document.createElement('div'); pn1.className = 'p-name'; pn1.style.color = selectedFighter.color; pn1.textContent = selectedFighter.name;
   pb1.appendChild(pn1);
-  const ps1 = document.createElement('div'); ps1.className = 'p-style'; ps1.textContent = f.style;
+  const ps1 = document.createElement('div'); ps1.className = 'p-style'; ps1.textContent = selectedFighter.style;
   pb1.appendChild(ps1);
   preview.appendChild(pb1);
 
@@ -1785,23 +1944,34 @@ function selectFighter(f) {
   const pb2 = document.createElement('div'); pb2.className = 'preview-box';
   const pc2 = document.createElement('canvas'); pc2.width = 120; pc2.height = 120;
   pb2.appendChild(pc2);
-  const pn2 = document.createElement('div'); pn2.className = 'p-name'; pn2.style.color = enemyFighter.color; pn2.textContent = enemyFighter.name;
-  pb2.appendChild(pn2);
-  const ps2 = document.createElement('div'); ps2.className = 'p-style'; ps2.textContent = enemyFighter.style;
-  pb2.appendChild(ps2);
+  if (enemyFighter) {
+    const pn2 = document.createElement('div'); pn2.className = 'p-name'; pn2.style.color = enemyFighter.color; pn2.textContent = enemyFighter.name;
+    pb2.appendChild(pn2);
+    const ps2 = document.createElement('div'); ps2.className = 'p-style'; ps2.textContent = enemyFighter.style;
+    pb2.appendChild(ps2);
+  } else {
+    const pn2 = document.createElement('div'); pn2.className = 'p-name'; pn2.style.color = '#555'; pn2.textContent = 'P2 Pick...';
+    pb2.appendChild(pn2);
+  }
   preview.appendChild(pb2);
 
-  drawFighterBody(pc1.getContext('2d'), 60, 105, f.w, f.h, f, 'idle', 0, 1, 0, 0, false, false);
-  drawFighterBody(pc2.getContext('2d'), 60, 105, enemyFighter.w, enemyFighter.h, enemyFighter, 'idle', 0, -1, 0, 0, false, false);
+  drawFighterBody(pc1.getContext('2d'), 60, 105, selectedFighter.w, selectedFighter.h, selectedFighter, 'idle', 0, 1, 0, 0, false, false);
+  if (enemyFighter) drawFighterBody(pc2.getContext('2d'), 60, 105, enemyFighter.w, enemyFighter.h, enemyFighter, 'idle', 0, -1, 0, 0, false, false);
 
   document.getElementById('moves-preview').innerHTML = `
-    <div class="move-tag"><span class="key">J</span> ${f.moves.punch.name} <span class="dmg">${f.moves.punch.dmg}dmg</span></div>
-    <div class="move-tag"><span class="key">K</span> ${f.moves.kick.name} <span class="dmg">${f.moves.kick.dmg}dmg</span></div>
-    <div class="move-tag"><span class="key">L</span> ${f.moves.special.name} <span class="dmg">${f.moves.special.dmg}dmg</span></div>
-    <div class="move-tag"><span class="key">J+K</span> ${f.moves.finisher.name} <span class="dmg">${f.moves.finisher.dmg}dmg</span></div>
+    <div class="move-tag"><span class="key">J</span> ${selectedFighter.moves.punch.name} <span class="dmg">${selectedFighter.moves.punch.dmg}dmg</span></div>
+    <div class="move-tag"><span class="key">K</span> ${selectedFighter.moves.kick.name} <span class="dmg">${selectedFighter.moves.kick.dmg}dmg</span></div>
+    <div class="move-tag"><span class="key">L</span> ${selectedFighter.moves.special.name} <span class="dmg">${selectedFighter.moves.special.dmg}dmg</span></div>
+    <div class="move-tag"><span class="key">J+K</span> ${selectedFighter.moves.finisher.name} <span class="dmg">${selectedFighter.moves.finisher.dmg}dmg</span></div>
   `;
   const btn = document.getElementById('fight-btn');
-  btn.disabled = false; btn.textContent = `FIGHT AS ${f.name.toUpperCase()}`;
+  const ready = selectedFighter && (gameMode === '1p' || enemyFighter);
+  btn.disabled = !ready;
+  if (gameMode === '2p' && !enemyFighter) {
+    btn.textContent = 'P2: PICK YOUR FIGHTER';
+  } else {
+    btn.textContent = `FIGHT${gameMode === '2p' ? '' : ' AS ' + selectedFighter.name.toUpperCase()}`;
+  }
 }
 
 function startFight() {
@@ -1830,7 +2000,7 @@ updateCareerBanner();
 buildSelect();
 if (career.lastFighter) {
   const last = FIGHTERS.find(f => f.id === career.lastFighter);
-  if (last) selectFighter(last);
+  if (last && (!last.boss || isBossUnlocked())) selectFighter(last);
 }
 gameLoop();
 </script>
