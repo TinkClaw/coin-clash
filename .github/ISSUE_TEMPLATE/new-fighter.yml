@@ -1,0 +1,84 @@
+name: New Fighter Submission
+description: Submit a new fighter for Coin Clash or Bot Clash
+title: "[Fighter] "
+labels: ["new-fighter"]
+body:
+  - type: input
+    id: fighter-name
+    attributes:
+      label: Fighter Name
+      placeholder: e.g. MoonCat
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Game Mode
+      options:
+        - Coin Clash (meme coin)
+        - Bot Clash (trading bot)
+    validations:
+      required: true
+  - type: dropdown
+    id: archetype
+    attributes:
+      label: Fighter Archetype
+      options:
+        - Speedster
+        - Tank
+        - All-Rounder
+        - Brawler
+        - Assassin
+        - Warrior
+        - Trickster
+        - Showman
+    validations:
+      required: true
+  - type: input
+    id: style
+    attributes:
+      label: Style Tagline
+      description: Short tagline shown on character select
+      placeholder: e.g. Quick paws, sharp claws
+    validations:
+      required: true
+  - type: textarea
+    id: concept
+    attributes:
+      label: Fighter Concept
+      description: Describe your fighter's theme, personality, and playstyle
+    validations:
+      required: true
+  - type: textarea
+    id: stats
+    attributes:
+      label: Proposed Stats
+      description: "HP (85-140), SPD (3-7), DEF (2-9), colors, moves. See CONTRIBUTING.md for guidelines."
+      placeholder: |
+        HP: 100
+        SPD: 5
+        DEF: 4
+        Color: #ff6600
+        Moves: ...
+    validations:
+      required: false
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot / Art Preview
+      description: If you have a draw function ready, paste a screenshot of your fighter
+    validations:
+      required: false
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Submission Checklist
+      options:
+        - label: I have read CONTRIBUTING.md
+          required: true
+        - label: My fighter uses Canvas 2D only (no external assets)
+          required: true
+        - label: Stats are within the balanced ranges
+          required: true
+        - label: No NSFW or hateful content
+          required: true
