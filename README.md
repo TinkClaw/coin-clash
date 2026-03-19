@@ -49,6 +49,10 @@ The short version: each fighter needs two things:
 - No images, no sprites — all characters are drawn with code
 - ~2000 lines of vanilla JS
 
+## Disclaimer
+
+Coin Clash is a parody/fan game. Character names reference cryptocurrency communities and are not affiliated with or endorsed by any token project.
+
 ## License
 
 MIT — see [LICENSE](LICENSE)
