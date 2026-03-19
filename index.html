@@ -351,7 +351,7 @@
         <span class="card-tag">ORIGINAL IP</span>
       </div>
     </div>
-    <div class="landing-bottom">Same engine. Cross-mode 2P. &mdash; <a href="https://github.com/TinkClaw/coin-clash">GitHub</a></div>
+    <div class="landing-bottom">Same engine. Cross-mode 2P. &mdash; <a href="https://github.com/TinkClaw/clash">GitHub</a></div>
   </div>
 </div>
 
@@ -385,7 +385,7 @@
   <div class="p2-hint" id="p2-hint" style="display:none">
     P2: <span>Arrows</span> Move &nbsp; <span>Num1</span> Punch &nbsp; <span>Num2</span> Kick &nbsp; <span>Num3</span> Special &nbsp; <span>Num0</span> Block
   </div>
-  <div class="game-footer">Coin Clash &mdash; Open Source on <a href="https://github.com/TinkClaw/coin-clash" target="_blank">GitHub</a></div>
+  <div class="game-footer">Coin Clash &mdash; Open Source on <a href="https://github.com/TinkClaw/clash" target="_blank">GitHub</a></div>
   <div class="game-disclaimer">Coin Clash is a parody/fan game. Character names reference cryptocurrency communities and are not affiliated with or endorsed by any token project.</div>
 </div>
 
@@ -2497,7 +2497,7 @@ function shareResults() {
   if (p1Won && combo >= 3) text += ` ${combo}-hit combo!`;
   if (p1Won && streak >= 3) text += ` ${streak} win streak!`;
   if (p1Won && p1.hp === p1.maxHp) text += ' FLAWLESS!';
-  text += GAME_MODE === 'bot' ? '\n\nPlay free: tinkclaw.com/botclash' : '\n\nPlay free: github.com/TinkClaw/coin-clash';
+  text += GAME_MODE === 'bot' ? '\n\nPlay free: tinkclaw.com/botclash' : '\n\nPlay free: github.com/TinkClaw/clash';
   const url = 'https://x.com/intent/tweet?text=' + encodeURIComponent(text);
   window.open(url, '_blank', 'width=550,height=420');
 }
