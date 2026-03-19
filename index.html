@@ -207,6 +207,11 @@
     }
     .mode-switch-btn:hover { border-color: #ff1493; color: #ff1493; }
 
+    /* Cross-mode roster labels */
+    .roster-divider { width: 100%; text-align: center; color: #555; font-size: 0.7em; letter-spacing: 3px; padding: 8px 0 4px; text-transform: uppercase; }
+    .roster-divider.coin { color: #ffd700; }
+    .roster-divider.bot { color: #00ffff; }
+
     .p2-hint {
       font-size: 0.7em; color: #ff6b6b; margin-top: 4px;
       text-align: center; line-height: 1.6;
@@ -1882,9 +1887,15 @@ let gameMode = '1p'; // '1p' or '2p'
 let p2SelectedFighter = null;
 function setMode(m) {
   gameMode = m;
+  selectedFighter = null; p2SelectedFighter = null; enemyFighter = null;
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
   document.getElementById('diff-row').style.display = m === '2p' ? 'none' : 'flex';
   document.getElementById('p2-hint').style.display = m === '2p' ? 'block' : 'none';
+  const btn = document.getElementById('fight-btn');
+  btn.disabled = true; btn.textContent = 'SELECT A FIGHTER';
+  document.getElementById('fighter-preview').innerHTML = '';
+  document.getElementById('moves-preview').innerHTML = '';
+  buildSelect();
   playSound('select', 0.2);
 }
 
@@ -2382,28 +2393,59 @@ function drawMiniChar(cvs, data) {
   drawFighterBody(c, cx, cy, data.w * 0.7, data.h * 0.7, data, 'idle', frameCount, 1, 0, 0, false, false);
 }
 
+function getCrossRoster() {
+  // In 2P mode, combine both rosters (deduplicate TinkClaw)
+  if (gameMode !== '2p' || GAME_MODE === 'landing') return null;
+  const seen = new Set();
+  const combined = [];
+  // Add current mode's fighters first
+  FIGHTERS.forEach(f => { if (!seen.has(f.id)) { seen.add(f.id); combined.push({ ...f, _roster: GAME_MODE }); } });
+  // Add the other mode's fighters
+  const other = GAME_MODE === 'bot' ? FIGHTERS_COIN : FIGHTERS_BOT;
+  const otherLabel = GAME_MODE === 'bot' ? 'coin' : 'bot';
+  other.forEach(f => { if (!seen.has(f.id)) { seen.add(f.id); combined.push({ ...f, _roster: otherLabel }); } });
+  return combined;
+}
+
 function buildSelect() {
   const roster = document.getElementById('roster');
   roster.innerHTML = '';
-  const maxHp = Math.max(...FIGHTERS.map(f => f.hp));
-  const maxSpd = Math.max(...FIGHTERS.map(f => f.spd));
-  const maxDef = Math.max(...FIGHTERS.map(f => f.def));
-  const maxAtk = Math.max(...FIGHTERS.map(f => f.moves.punch.dmg + f.moves.kick.dmg + f.moves.special.dmg));
+  const crossRoster = getCrossRoster();
+  const displayFighters = crossRoster || FIGHTERS;
+  const maxHp = Math.max(...displayFighters.map(f => f.hp));
+  const maxSpd = Math.max(...displayFighters.map(f => f.spd));
+  const maxDef = Math.max(...displayFighters.map(f => f.def));
+  const maxAtk = Math.max(...displayFighters.map(f => f.moves.punch.dmg + f.moves.kick.dmg + f.moves.special.dmg));
   const bossOpen = isBossUnlocked();
 
   // Unlock message
   const unlockEl = document.getElementById('unlock-msg');
-  if (!bossOpen) {
+  if (!bossOpen && !crossRoster) {
     const nonBoss = FIGHTERS.filter(f => !f.boss).map(f => f.id);
     const beaten = (career.beaten || []).filter(id => nonBoss.includes(id));
     const totalNonBoss = nonBoss.length;
     unlockEl.textContent = `Beat all ${totalNonBoss} fighters to unlock the boss (${beaten.length}/${totalNonBoss})`;
+  } else if (crossRoster) {
+    unlockEl.textContent = 'Cross-mode 2P — pick from both rosters!';
+    unlockEl.style.color = '#00ffff';
   } else {
     unlockEl.textContent = '';
   }
 
-  FIGHTERS.forEach(f => {
-    const locked = f.boss && !bossOpen;
+  // Track which roster section we're in for dividers
+  let currentRoster = null;
+  const rosterLabels = { coin: 'Coin Clash', bot: 'Bot Clash' };
+
+  displayFighters.forEach(f => {
+    // Add divider when switching rosters in cross mode
+    if (crossRoster && f._roster && f._roster !== currentRoster) {
+      currentRoster = f._roster;
+      const divider = document.createElement('div');
+      divider.className = 'roster-divider ' + f._roster;
+      divider.textContent = rosterLabels[f._roster] || f._roster;
+      roster.appendChild(divider);
+    }
+    const locked = f.boss && !bossOpen && !crossRoster; // Bosses unlocked in cross-mode 2P
     const card = document.createElement('div');
     card.className = 'roster-card' + (f.boss ? ' boss' : '') + (selectedFighter?.id === f.id ? ' sel' : '') + (locked ? ' locked' : '');
     card.onclick = locked ? null : () => selectFighter(f);
