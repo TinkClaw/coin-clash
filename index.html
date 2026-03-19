@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-  <title>TinkClaw: Coin Clash</title>
+  <title>TinkClaw: Clash</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     @keyframes bgPulse { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
@@ -166,6 +166,47 @@
     .game-footer a:hover { text-decoration: underline; }
     .game-disclaimer { color: #555; font-size: 0.65em; margin-top: 4px; text-align: center; }
 
+    /* Landing page for /clash */
+    #landing-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(135deg, #0a0015, #1a0030, #0d0020);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 200; gap: 30px;
+    }
+    #landing-overlay.hidden { display: none; }
+    #landing-overlay h1 {
+      font-size: 3em;
+      background: linear-gradient(90deg, #ff1493, #00ffff, #ff1493);
+      background-size: 200%;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: bgPulse 3s ease infinite;
+    }
+    .landing-sub { color: #ff69b4; letter-spacing: 4px; font-size: 1em; margin-top: -20px; }
+    .landing-modes { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+    .landing-card {
+      width: 260px; padding: 30px 20px; border-radius: 16px;
+      border: 2px solid #333; background: rgba(255,255,255,0.03);
+      cursor: pointer; transition: all 0.3s; text-align: center;
+    }
+    .landing-card:hover { border-color: #ff1493; background: rgba(255,20,147,0.08); transform: translateY(-4px); }
+    .landing-card h2 { font-size: 1.5em; margin-bottom: 6px; }
+    .landing-card.coin h2 { color: #ffd700; }
+    .landing-card.bot h2 { color: #00ffff; }
+    .landing-card p { color: #888; font-size: 0.85em; line-height: 1.4; }
+    .landing-card .card-tag { display: inline-block; margin-top: 10px; padding: 3px 12px; border-radius: 20px; font-size: 0.7em; font-weight: bold; letter-spacing: 1px; }
+    .landing-card.coin .card-tag { background: rgba(255,215,0,0.15); color: #ffd700; }
+    .landing-card.bot .card-tag { background: rgba(0,255,255,0.15); color: #00ffff; }
+
+    /* Mode switch button */
+    .mode-switch-btn {
+      position: fixed; top: 10px; left: 10px; z-index: 110;
+      padding: 5px 12px; font-size: 0.7em; font-weight: bold;
+      background: rgba(255,255,255,0.05); border: 1px solid #444;
+      color: #888; border-radius: 6px; cursor: pointer; transition: all 0.2s;
+    }
+    .mode-switch-btn:hover { border-color: #ff1493; color: #ff1493; }
+
     .p2-hint {
       font-size: 0.7em; color: #ff6b6b; margin-top: 4px;
       text-align: center; line-height: 1.6;
@@ -264,11 +305,29 @@
 </head>
 <body>
 
+<div id="landing-overlay" class="hidden">
+  <h1>CLASH</h1>
+  <div class="landing-sub">CHOOSE YOUR ARENA</div>
+  <div class="landing-modes">
+    <div class="landing-card coin" onclick="window.location.pathname='/coinclash'">
+      <h2>COIN CLASH</h2>
+      <p>Meme coins battle it out. Doge, Pepe, Shib, Bonk and more. Community-built fighters.</p>
+      <span class="card-tag">OPEN SOURCE</span>
+    </div>
+    <div class="landing-card bot" onclick="window.location.pathname='/botclash'">
+      <h2>BOT CLASH</h2>
+      <p>Trading bots enter the ring. Snipers, liquidators, grid bots and more. Original characters.</p>
+      <span class="card-tag">ORIGINAL IP</span>
+    </div>
+  </div>
+</div>
+
 <button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle Sound">&#9834;</button>
+<button class="mode-switch-btn" id="mode-switch-btn" onclick="window.location.pathname='/clash'">&#8592; Modes</button>
 
 <div id="select-overlay">
-  <h1>COIN CLASH</h1>
-  <div class="subtitle">MORTAL MEME COMBAT</div>
+  <h1 id="game-title">COIN CLASH</h1>
+  <div class="subtitle" id="game-subtitle">MORTAL MEME COMBAT</div>
   <div class="career-banner" id="career-banner"></div>
   <div class="mode-row">
     <button class="mode-btn active" data-mode="1p" onclick="setMode('1p')">1P vs AI</button>
@@ -424,6 +483,29 @@ function playSound(type, vol = 0.3) {
   } catch(e) { /* audio not available */ }
 }
 
+// ====================== MODE ROUTING ======================
+const path = window.location.pathname.replace(/\/+$/, '').toLowerCase();
+const GAME_MODE = path.includes('botclash') ? 'bot' : path.includes('coinclash') ? 'coin' : 'landing';
+
+if (GAME_MODE === 'landing') {
+  document.getElementById('landing-overlay').classList.remove('hidden');
+  document.getElementById('select-overlay').classList.add('hidden');
+  document.getElementById('mode-switch-btn').style.display = 'none';
+} else {
+  document.getElementById('landing-overlay').classList.add('hidden');
+  if (GAME_MODE === 'bot') {
+    document.title = 'TinkClaw: Bot Clash';
+    document.getElementById('game-title').textContent = 'BOT CLASH';
+    document.getElementById('game-subtitle').textContent = 'TRADING BOT WARFARE';
+    const footer = document.querySelector('.game-footer');
+    if (footer) footer.innerHTML = 'Bot Clash &mdash; by <a href="https://github.com/TinkClaw" target="_blank">TinkClaw</a>';
+    const disclaimer = document.querySelector('.game-disclaimer');
+    if (disclaimer) disclaimer.textContent = 'Bot Clash features original characters. All bot names and designs are fictional.';
+  } else {
+    document.title = 'TinkClaw: Coin Clash';
+  }
+}
+
 // ====================== FIGHTER RENDERING ======================
 // Each fighter has a custom draw function that creates a unique character
 
@@ -446,6 +528,15 @@ function drawFighterBody(ctx, x, y, w, h, data, state, frame, facing, armExt, le
     case 'trump': drawTrump(ctx, x, baseY, w, h, data, f, breathe, walkCycle, armExt, legExt, frame); break;
     case 'samo': drawSamo(ctx, x, baseY, w, h, data, f, breathe, walkCycle, armExt, legExt, frame); break;
     case 'tinkclaw': drawTinkClaw(ctx, x, baseY, w, h, data, f, breathe, walkCycle, armExt, legExt, frame); break;
+    case 'snipebot': drawSnipeBot(ctx, x, baseY, w, h, data, f, breathe, walkCycle, armExt, legExt, frame); break;
+    case 'gridbot': drawGridBot(ctx, x, baseY, w, h, data, f, breathe, walkCycle, armExt, legExt, frame); break;
+    case 'liquidator': drawLiquidator(ctx, x, baseY, w, h, data, f, breathe, walkCycle, armExt, legExt, frame); break;
+    case 'sandwich': drawSandwichBot(ctx, x, baseY, w, h, data, f, breathe, walkCycle, armExt, legExt, frame); break;
+    case 'arbbot': drawArbBot(ctx, x, baseY, w, h, data, f, breathe, walkCycle, armExt, legExt, frame); break;
+    case 'flashbot': drawFlashBot(ctx, x, baseY, w, h, data, f, breathe, walkCycle, armExt, legExt, frame); break;
+    case 'whalebot': drawWhaleBot(ctx, x, baseY, w, h, data, f, breathe, walkCycle, armExt, legExt, frame); break;
+    case 'dcabot': drawDCABot(ctx, x, baseY, w, h, data, f, breathe, walkCycle, armExt, legExt, frame); break;
+    case 'frontrunner': drawFrontRunner(ctx, x, baseY, w, h, data, f, breathe, walkCycle, armExt, legExt, frame); break;
     default: drawGeneric(ctx, x, baseY, w, h, data, f, breathe, walkCycle, armExt, legExt, frame); break;
   }
 
@@ -882,6 +973,351 @@ function drawTinkClaw(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, f
   ctx.shadowColor = '#ff1493'; ctx.shadowBlur = 8; ctx.fillStyle = '#ff1493';
   ctx.beginPath(); ctx.arc(x, headY - 36, 3, 0, Math.PI * 2); ctx.fill();
   ctx.shadowBlur = 0;
+}
+
+// ======================== BOT FIGHTERS ========================
+function drawSnipeBot(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, frame) {
+  const bodyY = y - h * 0.36;
+  // Legs - thin and precise
+  drawLimb(ctx, x - 6, y - 12, x - 8 - walk, y, 5, '#cc3300');
+  drawLimb(ctx, x + 6, y - 12, x + 8 + walk, y, 5, '#cc3300');
+  drawFist(ctx, x - 8 - walk, y, 4, '#ff4400');
+  drawFist(ctx, x + 8 + walk, y, 4, '#ff4400');
+  // Slim body
+  ctx.fillStyle = '#1a0505'; ctx.strokeStyle = '#ff4400'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(x, bodyY + breathe, 18, 20, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Crosshair on body
+  ctx.strokeStyle = '#ff000088'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x - 10, bodyY + breathe); ctx.lineTo(x + 10, bodyY + breathe); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, bodyY - 10 + breathe); ctx.lineTo(x, bodyY + 10 + breathe); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, bodyY + breathe, 8, 0, Math.PI * 2); ctx.stroke();
+  // Arms
+  const armY = bodyY - 5 + breathe;
+  drawLimb(ctx, x - f * 14, armY, x - f * 24, armY + 8, 5, '#cc3300');
+  const fistX = x + f * (20 + armExt * 32);
+  const fistY = armY - armExt * 10;
+  drawLimb(ctx, x + f * 14, armY, fistX, fistY, 5, '#cc3300');
+  if (armExt > 0.3) { ctx.shadowColor = '#ff4400'; ctx.shadowBlur = 8; drawFist(ctx, fistX, fistY, 5, '#ff4400'); ctx.shadowBlur = 0; }
+  if (legExt > 0.3) { const kx = x + f * (14 + legExt * 28); drawLimb(ctx, x + f * 6, y - 12, kx, y - 8 - legExt * 12, 6, '#cc3300'); drawFist(ctx, kx, y - 8 - legExt * 12, 5, '#ff4400'); }
+  // Head - angular with scope eye
+  const headY = bodyY - 24 + breathe;
+  ctx.fillStyle = '#1a0505'; ctx.strokeStyle = '#ff4400'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, headY, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Scope eye
+  ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(x + f * 4, headY - 2, 6, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(x + f * 4, headY - 2, 2, 0, Math.PI * 2); ctx.fill();
+  // Other eye
+  ctx.fillStyle = '#ff4400'; ctx.beginPath(); ctx.arc(x - f * 5, headY - 2, 3, 0, Math.PI * 2); ctx.fill();
+  // Antenna
+  ctx.strokeStyle = '#ff4400'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x + f * 8, headY - 10); ctx.lineTo(x + f * 14, headY - 22); ctx.stroke();
+  ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(x + f * 14, headY - 22, 2, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawGridBot(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, frame) {
+  const bodyY = y - h * 0.34;
+  // Sturdy legs
+  drawLimb(ctx, x - 10, y - 14, x - 12 - walk, y, 8, '#1a6b6b');
+  drawLimb(ctx, x + 10, y - 14, x + 12 + walk, y, 8, '#1a6b6b');
+  drawFist(ctx, x - 12 - walk, y, 5, '#00cccc');
+  drawFist(ctx, x + 12 + walk, y, 5, '#00cccc');
+  // Boxy body
+  ctx.fillStyle = '#0a2020'; ctx.strokeStyle = '#00cccc'; ctx.lineWidth = 2;
+  const bw = 26, bh = 24;
+  ctx.fillRect(x - bw, bodyY - bh + breathe, bw * 2, bh * 2);
+  ctx.strokeRect(x - bw, bodyY - bh + breathe, bw * 2, bh * 2);
+  // Grid lines on body
+  ctx.strokeStyle = '#00cccc44'; ctx.lineWidth = 1;
+  for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(x + i * 10, bodyY - bh + breathe); ctx.lineTo(x + i * 10, bodyY + bh + breathe); ctx.stroke(); }
+  for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(x - bw, bodyY + i * 10 + breathe); ctx.lineTo(x + bw, bodyY + i * 10 + breathe); ctx.stroke(); }
+  // Arms
+  const armY = bodyY - 8 + breathe;
+  drawLimb(ctx, x - f * 22, armY, x - f * 30, armY + 12, 7, '#1a6b6b');
+  const fx = x + f * (26 + armExt * 28);
+  drawLimb(ctx, x + f * 22, armY, fx, armY - armExt * 8, 7, '#1a6b6b');
+  if (armExt > 0.3) drawFist(ctx, fx, armY - armExt * 8, 6, '#00cccc');
+  if (legExt > 0.3) { const kx = x + f * (14 + legExt * 26); drawLimb(ctx, x + f * 10, y - 14, kx, y - 10 - legExt * 10, 8, '#1a6b6b'); drawFist(ctx, kx, y - 10 - legExt * 10, 6, '#00cccc'); }
+  // Square head
+  const headY = bodyY - bh - 14 + breathe;
+  ctx.fillStyle = '#0a2020'; ctx.strokeStyle = '#00cccc'; ctx.lineWidth = 2;
+  ctx.fillRect(x - 14, headY - 12, 28, 24); ctx.strokeRect(x - 14, headY - 12, 28, 24);
+  // LED eyes
+  const pulse = 0.6 + Math.sin(frame * 0.1) * 0.4;
+  ctx.fillStyle = `rgba(0,255,255,${pulse})`;
+  ctx.fillRect(x - 8, headY - 4, 6, 4); ctx.fillRect(x + 2, headY - 4, 6, 4);
+  // Antenna
+  ctx.strokeStyle = '#00cccc'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x, headY - 12); ctx.lineTo(x, headY - 22); ctx.stroke();
+  ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(x, headY - 22, 3, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawLiquidator(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, frame) {
+  const bodyY = y - h * 0.35;
+  // Dripping legs
+  drawLimb(ctx, x - 9, y - 12, x - 11 - walk, y, 7, '#666');
+  drawLimb(ctx, x + 9, y - 12, x + 11 + walk, y, 7, '#666');
+  drawFist(ctx, x - 11 - walk, y, 5, '#999');
+  drawFist(ctx, x + 11 + walk, y, 5, '#999');
+  // Metallic body with drip effect
+  const drip = Math.sin(frame * 0.05) * 3;
+  ctx.fillStyle = '#2a2a2a'; ctx.strokeStyle = '#c0c0c0'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(x, bodyY + breathe, 24, 22 + drip, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Chrome shine
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath(); ctx.ellipse(x - 6, bodyY - 8 + breathe, 8, 12, -0.3, 0, Math.PI * 2); ctx.fill();
+  // Danger symbol
+  ctx.fillStyle = '#ff3333'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('!', x, bodyY + 5 + breathe);
+  // Arms
+  const armY = bodyY - 6 + breathe;
+  drawLimb(ctx, x - f * 18, armY, x - f * 26, armY + 10, 6, '#888');
+  const fx = x + f * (22 + armExt * 30);
+  drawLimb(ctx, x + f * 18, armY, fx, armY - armExt * 10, 6, '#888');
+  if (armExt > 0.3) { ctx.shadowColor = '#c0c0c0'; ctx.shadowBlur = 8; drawFist(ctx, fx, armY - armExt * 10, 6, '#c0c0c0'); ctx.shadowBlur = 0; }
+  if (legExt > 0.3) { const kx = x + f * (14 + legExt * 28); drawLimb(ctx, x + f * 9, y - 12, kx, y - 8 - legExt * 12, 8, '#888'); drawFist(ctx, kx, y - 8 - legExt * 12, 6, '#c0c0c0'); }
+  // Head - liquid metal
+  const headY = bodyY - 26 + breathe;
+  ctx.fillStyle = '#333'; ctx.strokeStyle = '#c0c0c0'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, headY, 16, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Menacing eyes
+  ctx.fillStyle = '#ff3333';
+  ctx.beginPath(); ctx.arc(x - 6, headY - 2, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 6, headY - 2, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(x - 6, headY - 2, 1.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 6, headY - 2, 1.5, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawSandwichBot(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, frame) {
+  const bodyY = y - h * 0.35;
+  // Legs
+  drawLimb(ctx, x - 8, y - 10, x - 10 - walk, y, 6, '#8B6914');
+  drawLimb(ctx, x + 8, y - 10, x + 10 + walk, y, 6, '#8B6914');
+  drawFist(ctx, x - 10 - walk, y, 4, '#DAA520');
+  drawFist(ctx, x + 10 + walk, y, 4, '#DAA520');
+  // Top bread
+  ctx.fillStyle = '#DAA520'; ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(x, bodyY - 8 + breathe, 22, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Filling layers
+  ctx.fillStyle = '#33cc33'; ctx.beginPath(); ctx.ellipse(x, bodyY + breathe, 20, 4, 0, 0, Math.PI * 2); ctx.fill(); // lettuce
+  ctx.fillStyle = '#ff6666'; ctx.beginPath(); ctx.ellipse(x, bodyY + 5 + breathe, 19, 3, 0, 0, Math.PI * 2); ctx.fill(); // tomato
+  ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.ellipse(x, bodyY + 9 + breathe, 18, 3, 0, 0, Math.PI * 2); ctx.fill(); // cheese
+  // Bottom bread
+  ctx.fillStyle = '#DAA520'; ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(x, bodyY + 16 + breathe, 22, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Arms
+  const armY = bodyY + breathe;
+  drawLimb(ctx, x - f * 18, armY, x - f * 26, armY + 10, 5, '#8B6914');
+  const fx = x + f * (22 + armExt * 28);
+  drawLimb(ctx, x + f * 18, armY, fx, armY - armExt * 8, 5, '#8B6914');
+  if (armExt > 0.3) drawFist(ctx, fx, armY - armExt * 8, 5, '#DAA520');
+  if (legExt > 0.3) { const kx = x + f * (12 + legExt * 26); drawLimb(ctx, x + f * 8, y - 10, kx, y - 8 - legExt * 10, 7, '#8B6914'); drawFist(ctx, kx, y - 8 - legExt * 10, 5, '#DAA520'); }
+  // Head - small, sneaky
+  const headY = bodyY - 24 + breathe;
+  ctx.fillStyle = '#2a1a00'; ctx.strokeStyle = '#DAA520'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, headY, 13, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  drawEyes(ctx, x, headY - 2, f, 3, 2, 6, '#DAA520');
+  // Evil grin
+  ctx.strokeStyle = '#DAA520'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(x + f * 2, headY + 5, 6, 0, Math.PI); ctx.stroke();
+}
+
+function drawArbBot(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, frame) {
+  const bodyY = y - h * 0.35;
+  // Legs
+  drawLimb(ctx, x - 8, y - 12, x - 10 - walk, y, 6, '#6b3fa0');
+  drawLimb(ctx, x + 8, y - 12, x + 10 + walk, y, 6, '#6b3fa0');
+  drawFist(ctx, x - 10 - walk, y, 4, '#9d5ce5');
+  drawFist(ctx, x + 10 + walk, y, 4, '#9d5ce5');
+  // Body - split two-tone (buy/sell sides)
+  ctx.save(); ctx.beginPath(); ctx.rect(x - 24, bodyY - 22 + breathe, 24, 44); ctx.clip();
+  ctx.fillStyle = '#1a3300'; ctx.beginPath(); ctx.ellipse(x, bodyY + breathe, 24, 22, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.beginPath(); ctx.rect(x, bodyY - 22 + breathe, 24, 44); ctx.clip();
+  ctx.fillStyle = '#330000'; ctx.beginPath(); ctx.ellipse(x, bodyY + breathe, 24, 22, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  ctx.strokeStyle = '#9d5ce5'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(x, bodyY + breathe, 24, 22, 0, 0, Math.PI * 2); ctx.stroke();
+  // Arrows (buy/sell)
+  ctx.fillStyle = '#00ff66'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('\u25B2', x - 8, bodyY + 3 + breathe);
+  ctx.fillStyle = '#ff4444';
+  ctx.fillText('\u25BC', x + 8, bodyY + 5 + breathe);
+  // Arms
+  const armY = bodyY - 5 + breathe;
+  drawLimb(ctx, x - f * 18, armY, x - f * 26, armY + 10, 5, '#6b3fa0');
+  const fx = x + f * (22 + armExt * 30);
+  drawLimb(ctx, x + f * 18, armY, fx, armY - armExt * 10, 5, '#6b3fa0');
+  if (armExt > 0.3) { ctx.shadowColor = '#9d5ce5'; ctx.shadowBlur = 6; drawFist(ctx, fx, armY - armExt * 10, 5, '#9d5ce5'); ctx.shadowBlur = 0; }
+  if (legExt > 0.3) { const kx = x + f * (12 + legExt * 28); drawLimb(ctx, x + f * 8, y - 12, kx, y - 8 - legExt * 12, 7, '#6b3fa0'); drawFist(ctx, kx, y - 8 - legExt * 12, 5, '#9d5ce5'); }
+  // Head
+  const headY = bodyY - 26 + breathe;
+  ctx.fillStyle = '#1a0030'; ctx.strokeStyle = '#9d5ce5'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, headY, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Balance scale eyes
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x - 10, headY - 4); ctx.lineTo(x + 10, headY - 4); ctx.stroke();
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath(); ctx.arc(x - 8, headY - 2, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 8, headY - 2, 3, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawFlashBot(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, frame) {
+  const bodyY = y - h * 0.36;
+  const flicker = Math.sin(frame * 0.2) > 0 ? 1 : 0.7;
+  // Legs - electric
+  drawLimb(ctx, x - 7, y - 12, x - 9 - walk, y, 5, `rgba(255,230,0,${flicker})`);
+  drawLimb(ctx, x + 7, y - 12, x + 9 + walk, y, 5, `rgba(255,230,0,${flicker})`);
+  // Body - lightning bolt shaped via triangles
+  ctx.fillStyle = `rgba(40,30,0,${flicker})`; ctx.strokeStyle = `rgba(255,230,0,${flicker})`; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - 16, bodyY - 16 + breathe); ctx.lineTo(x + 8, bodyY - 16 + breathe);
+  ctx.lineTo(x - 4, bodyY + breathe); ctx.lineTo(x + 16, bodyY + breathe);
+  ctx.lineTo(x - 8, bodyY + 20 + breathe); ctx.lineTo(x + 4, bodyY + breathe);
+  ctx.lineTo(x - 16, bodyY + breathe);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // Electric sparks
+  ctx.shadowColor = '#ffe600'; ctx.shadowBlur = 10;
+  for (let i = 0; i < 3; i++) {
+    const sx = x + Math.sin(frame * 0.3 + i * 2) * 20;
+    const sy = bodyY + Math.cos(frame * 0.25 + i * 3) * 16 + breathe;
+    ctx.fillStyle = '#ffe600'; ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+  // Arms
+  const armY = bodyY - 2 + breathe;
+  drawLimb(ctx, x - f * 14, armY, x - f * 22, armY + 8, 4, `rgba(255,230,0,${flicker})`);
+  const fx = x + f * (18 + armExt * 30);
+  drawLimb(ctx, x + f * 14, armY, fx, armY - armExt * 10, 4, `rgba(255,230,0,${flicker})`);
+  if (armExt > 0.3) { ctx.shadowColor = '#ffe600'; ctx.shadowBlur = 12; drawFist(ctx, fx, armY - armExt * 10, 5, '#ffe600'); ctx.shadowBlur = 0; }
+  if (legExt > 0.3) { const kx = x + f * (10 + legExt * 28); drawLimb(ctx, x + f * 7, y - 12, kx, y - 8 - legExt * 12, 6, '#ffe600'); drawFist(ctx, kx, y - 8 - legExt * 12, 5, '#ffe600'); }
+  // Head
+  const headY = bodyY - 22 + breathe;
+  ctx.fillStyle = '#1a1800'; ctx.strokeStyle = `rgba(255,230,0,${flicker})`; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, headY, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Glowing eyes
+  ctx.shadowColor = '#ffe600'; ctx.shadowBlur = 6;
+  ctx.fillStyle = '#ffe600';
+  ctx.beginPath(); ctx.arc(x - 5, headY - 2, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 5, headY - 2, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function drawWhaleBot(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, frame) {
+  const bodyY = y - h * 0.32;
+  // Thick legs
+  drawLimb(ctx, x - 12, y - 16, x - 14 - walk, y, 10, '#1a3366');
+  drawLimb(ctx, x + 12, y - 16, x + 14 + walk, y, 10, '#1a3366');
+  drawFist(ctx, x - 14 - walk, y, 6, '#2255aa');
+  drawFist(ctx, x + 14 + walk, y, 6, '#2255aa');
+  // Massive body
+  ctx.fillStyle = '#0a1a33'; ctx.strokeStyle = '#2255aa'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.ellipse(x, bodyY + breathe, 30, 26, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Water splash pattern
+  ctx.fillStyle = 'rgba(34,85,170,0.3)';
+  const wave = Math.sin(frame * 0.06) * 4;
+  ctx.beginPath(); ctx.ellipse(x, bodyY + 10 + breathe + wave, 26, 8, 0, 0, Math.PI); ctx.fill();
+  // $ symbol
+  ctx.fillStyle = '#4488cc'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('$', x, bodyY + 6 + breathe);
+  // Arms
+  const armY = bodyY - 6 + breathe;
+  drawLimb(ctx, x - f * 24, armY, x - f * 32, armY + 14, 8, '#1a3366');
+  const fx = x + f * (28 + armExt * 26);
+  drawLimb(ctx, x + f * 24, armY, fx, armY - armExt * 8, 8, '#1a3366');
+  if (armExt > 0.3) drawFist(ctx, fx, armY - armExt * 8, 7, '#2255aa');
+  if (legExt > 0.3) { const kx = x + f * (16 + legExt * 24); drawLimb(ctx, x + f * 12, y - 16, kx, y - 10 - legExt * 10, 10, '#1a3366'); drawFist(ctx, kx, y - 10 - legExt * 10, 7, '#2255aa'); }
+  // Head
+  const headY = bodyY - 28 + breathe;
+  ctx.fillStyle = '#0a1a33'; ctx.strokeStyle = '#2255aa'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, headY, 18, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Small wise eyes
+  ctx.fillStyle = '#4488cc';
+  ctx.beginPath(); ctx.arc(x - 7, headY - 2, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 7, headY - 2, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(x - 7, headY - 2, 1.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 7, headY - 2, 1.5, 0, Math.PI * 2); ctx.fill();
+  // Whale spout
+  ctx.strokeStyle = '#4488cc88'; ctx.lineWidth = 1.5;
+  const spout = Math.sin(frame * 0.04) * 2;
+  ctx.beginPath(); ctx.moveTo(x, headY - 18); ctx.quadraticCurveTo(x - 6, headY - 28 + spout, x - 3, headY - 34 + spout); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, headY - 18); ctx.quadraticCurveTo(x + 6, headY - 28 + spout, x + 3, headY - 34 + spout); ctx.stroke();
+}
+
+function drawDCABot(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, frame) {
+  const bodyY = y - h * 0.35;
+  // Steady legs
+  drawLimb(ctx, x - 9, y - 12, x - 11 - walk, y, 7, '#1a5c1a');
+  drawLimb(ctx, x + 9, y - 12, x + 11 + walk, y, 7, '#1a5c1a');
+  drawFist(ctx, x - 11 - walk, y, 5, '#33aa33');
+  drawFist(ctx, x + 11 + walk, y, 5, '#33aa33');
+  // Round, sturdy body
+  ctx.fillStyle = '#0a1a0a'; ctx.strokeStyle = '#33aa33'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(x, bodyY + breathe, 24, 22, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Clock face on body
+  ctx.strokeStyle = '#33aa3388'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(x, bodyY + breathe, 12, 0, Math.PI * 2); ctx.stroke();
+  // Clock hands
+  const angle1 = (frame * 0.02) % (Math.PI * 2);
+  const angle2 = (frame * 0.005) % (Math.PI * 2);
+  ctx.strokeStyle = '#33aa33'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x, bodyY + breathe); ctx.lineTo(x + Math.cos(angle1) * 8, bodyY + breathe + Math.sin(angle1) * 8); ctx.stroke();
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x, bodyY + breathe); ctx.lineTo(x + Math.cos(angle2) * 6, bodyY + breathe + Math.sin(angle2) * 6); ctx.stroke();
+  // Arms
+  const armY = bodyY - 5 + breathe;
+  drawLimb(ctx, x - f * 18, armY, x - f * 26, armY + 10, 6, '#1a5c1a');
+  const fx = x + f * (22 + armExt * 28);
+  drawLimb(ctx, x + f * 18, armY, fx, armY - armExt * 8, 6, '#1a5c1a');
+  if (armExt > 0.3) drawFist(ctx, fx, armY - armExt * 8, 5, '#33aa33');
+  if (legExt > 0.3) { const kx = x + f * (12 + legExt * 26); drawLimb(ctx, x + f * 9, y - 12, kx, y - 8 - legExt * 10, 7, '#1a5c1a'); drawFist(ctx, kx, y - 8 - legExt * 10, 5, '#33aa33'); }
+  // Head
+  const headY = bodyY - 26 + breathe;
+  ctx.fillStyle = '#0a1a0a'; ctx.strokeStyle = '#33aa33'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, headY, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Calm eyes
+  ctx.fillStyle = '#33aa33';
+  ctx.beginPath(); ctx.arc(x - 5, headY - 2, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 5, headY - 2, 3, 0, Math.PI * 2); ctx.fill();
+  // Subtle smile
+  ctx.strokeStyle = '#33aa33'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(x, headY + 4, 5, 0.1, Math.PI - 0.1); ctx.stroke();
+}
+
+function drawFrontRunner(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, frame) {
+  const bodyY = y - h * 0.36;
+  // Fast legs
+  drawLimb(ctx, x - 7, y - 12, x - 10 - walk * 1.3, y, 5, '#8b0000');
+  drawLimb(ctx, x + 7, y - 12, x + 10 + walk * 1.3, y, 5, '#8b0000');
+  drawFist(ctx, x - 10 - walk * 1.3, y, 4, '#ff2222');
+  drawFist(ctx, x + 10 + walk * 1.3, y, 4, '#ff2222');
+  // Sleek body with speed lines
+  ctx.fillStyle = '#1a0000'; ctx.strokeStyle = '#ff2222'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(x, bodyY + breathe, 20, 22, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Speed lines
+  ctx.strokeStyle = '#ff222244'; ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) {
+    const ly = bodyY - 8 + i * 8 + breathe;
+    ctx.beginPath(); ctx.moveTo(x - f * 22, ly); ctx.lineTo(x - f * 35, ly); ctx.stroke();
+  }
+  // >> symbol
+  ctx.fillStyle = '#ff4444'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('>>', x + f * 2, bodyY + 5 + breathe);
+  // Arms
+  const armY = bodyY - 5 + breathe;
+  drawLimb(ctx, x - f * 16, armY, x - f * 24, armY + 8, 4, '#8b0000');
+  const fx = x + f * (20 + armExt * 32);
+  drawLimb(ctx, x + f * 16, armY, fx, armY - armExt * 12, 4, '#8b0000');
+  if (armExt > 0.3) { ctx.shadowColor = '#ff2222'; ctx.shadowBlur = 8; drawFist(ctx, fx, armY - armExt * 12, 5, '#ff2222'); ctx.shadowBlur = 0; }
+  if (legExt > 0.3) { const kx = x + f * (12 + legExt * 30); drawLimb(ctx, x + f * 7, y - 12, kx, y - 6 - legExt * 14, 6, '#8b0000'); drawFist(ctx, kx, y - 6 - legExt * 14, 5, '#ff2222'); }
+  // Head - aerodynamic
+  const headY = bodyY - 24 + breathe;
+  ctx.fillStyle = '#1a0000'; ctx.strokeStyle = '#ff2222'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(x + f * 3, headY, 14, 13, f * 0.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Sharp eyes
+  ctx.fillStyle = '#ff4444';
+  ctx.beginPath(); ctx.moveTo(x - 4, headY - 4); ctx.lineTo(x - 10, headY - 2); ctx.lineTo(x - 4, headY); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x + 4, headY - 4); ctx.lineTo(x + 10, headY - 2); ctx.lineTo(x + 4, headY); ctx.fill();
 }
 
 function drawGeneric(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, frame) {
@@ -1744,8 +2180,109 @@ const FIGHTERS = [
   }
 ];
 
+const BOT_FIGHTERS = [
+  {
+    id: 'snipebot', name: 'Snipe', type: 'Speedster', style: 'Precision strikes, fastest execution',
+    color: '#ff4400', outline: '#cc3300', boss: false, w: 44, h: 76, hp: 85, spd: 7, def: 2,
+    moves: {
+      punch:    { name: 'Quick Shot', dmg: 7, startup: 2, active: 4, recovery: 5, range: 50, color: '#ff6644' },
+      kick:     { name: 'Scope Kick', dmg: 10, startup: 4, active: 5, recovery: 7, range: 55, color: '#ff4400', dash: 100 },
+      special:  { name: 'Headshot', dmg: 24, startup: 6, active: 4, recovery: 12, range: 80, color: '#ff0000', projectile: true, projSpd: 12, projColor: '#ff4400' },
+      finisher: { name: 'KILLSHOT', dmg: 48, startup: 5, active: 8, recovery: 14, range: 60, color: '#ff0000', shakeScreen: true, unblockable: true }
+    }
+  },
+  {
+    id: 'gridbot', name: 'Gridlock', type: 'Tank', style: 'Methodical, unbreakable defense',
+    color: '#00cccc', outline: '#1a6b6b', boss: false, w: 58, h: 86, hp: 140, spd: 3, def: 9,
+    moves: {
+      punch:    { name: 'Grid Punch', dmg: 9, startup: 6, active: 6, recovery: 9, range: 55, color: '#00ffff' },
+      kick:     { name: 'Wall Kick', dmg: 11, startup: 7, active: 5, recovery: 10, range: 54, color: '#00cccc' },
+      special:  { name: 'Grid Shield', dmg: 0, startup: 3, active: 50, recovery: 8, range: 0, color: '#00ffff', shield: true },
+      finisher: { name: 'GRID LOCK', dmg: 46, startup: 12, active: 10, recovery: 18, range: 65, color: '#00ffff', shakeScreen: true, unblockable: true }
+    }
+  },
+  {
+    id: 'liquidator', name: 'Liquidator', type: 'Brawler', style: 'Heavy hits, melts positions',
+    color: '#c0c0c0', outline: '#666666', boss: false, w: 56, h: 84, hp: 125, spd: 3, def: 7,
+    moves: {
+      punch:    { name: 'Chrome Fist', dmg: 13, startup: 7, active: 7, recovery: 11, range: 60, color: '#e0e0e0' },
+      kick:     { name: 'Metal Stomp', dmg: 12, startup: 6, active: 6, recovery: 10, range: 55, color: '#c0c0c0', shakeScreen: true },
+      special:  { name: 'Liquidate', dmg: 26, startup: 12, active: 8, recovery: 16, range: 70, color: '#ff3333', launch: true, shakeScreen: true },
+      finisher: { name: 'MARGIN CALL', dmg: 54, startup: 10, active: 10, recovery: 20, range: 70, color: '#ff0000', launch: true, shakeScreen: true, unblockable: true }
+    }
+  },
+  {
+    id: 'sandwich', name: 'Sandwich', type: 'Trickster', style: 'Traps opponents, extracts value',
+    color: '#DAA520', outline: '#8B6914', boss: false, w: 48, h: 78, hp: 95, spd: 5, def: 3,
+    moves: {
+      punch:    { name: 'Front Slice', dmg: 7, startup: 3, active: 5, recovery: 7, range: 50, color: '#ffcc44' },
+      kick:     { name: 'Back Slice', dmg: 11, startup: 5, active: 6, recovery: 9, range: 56, color: '#DAA520', leaps: true },
+      special:  { name: 'Sandwich Attack', dmg: 18, startup: 6, active: 10, recovery: 10, range: 0, color: '#ffcc00', teleport: true },
+      finisher: { name: 'MEV EXTRACT', dmg: 50, startup: 8, active: 8, recovery: 16, range: 60, color: '#ffd700', launch: true, shakeScreen: true, unblockable: true, steal: 0.3 }
+    }
+  },
+  {
+    id: 'arbbot', name: 'Arbiter', type: 'All-Rounder', style: 'Balanced, exploits every gap',
+    color: '#9d5ce5', outline: '#6b3fa0', boss: false, w: 52, h: 80, hp: 110, spd: 4, def: 5,
+    moves: {
+      punch:    { name: 'Buy Strike', dmg: 8, startup: 4, active: 6, recovery: 8, range: 55, color: '#00ff66' },
+      kick:     { name: 'Sell Kick', dmg: 11, startup: 6, active: 5, recovery: 10, range: 58, color: '#ff4444' },
+      special:  { name: 'Arb Flash', dmg: 16, startup: 7, active: 8, recovery: 11, range: 0, color: '#9d5ce5', teleport: true },
+      finisher: { name: 'PRICE IMPACT', dmg: 46, startup: 8, active: 10, recovery: 16, range: 65, color: '#ffd700', launch: true, shakeScreen: true, unblockable: true }
+    }
+  },
+  {
+    id: 'flashbot', name: 'Flash', type: 'Assassin', style: 'Massive burst, gone in a flash',
+    color: '#ffe600', outline: '#ccb800', boss: false, w: 46, h: 76, hp: 80, spd: 6, def: 2,
+    moves: {
+      punch:    { name: 'Spark Jab', dmg: 6, startup: 2, active: 4, recovery: 5, range: 48, color: '#ffff66' },
+      kick:     { name: 'Volt Kick', dmg: 10, startup: 4, active: 5, recovery: 7, range: 54, color: '#ffe600', dash: 130 },
+      special:  { name: 'Flash Loan', dmg: 30, startup: 4, active: 6, recovery: 20, range: 65, color: '#ffe600', dash: 200 },
+      finisher: { name: 'FLASH CRASH', dmg: 58, startup: 6, active: 6, recovery: 22, range: 60, color: '#ffff00', shakeScreen: true, unblockable: true }
+    }
+  },
+  {
+    id: 'whalebot', name: 'Whale', type: 'Tank', style: 'Massive, moves markets',
+    color: '#2255aa', outline: '#1a3366', boss: false, w: 60, h: 88, hp: 150, spd: 2, def: 8,
+    moves: {
+      punch:    { name: 'Market Slap', dmg: 14, startup: 8, active: 8, recovery: 12, range: 65, color: '#4488cc' },
+      kick:     { name: 'Whale Tail', dmg: 12, startup: 7, active: 6, recovery: 10, range: 58, color: '#2255aa', shakeScreen: true },
+      special:  { name: 'Market Dump', dmg: 22, startup: 14, active: 10, recovery: 18, range: 80, color: '#2255aa', projectile: true, projSpd: 5, projColor: '#4488cc' },
+      finisher: { name: 'WHALE SPLASH', dmg: 52, startup: 14, active: 12, recovery: 22, range: 75, color: '#0066ff', launch: true, shakeScreen: true, unblockable: true }
+    }
+  },
+  {
+    id: 'dcabot', name: 'DCA', type: 'Warrior', style: 'Relentless, never stops buying',
+    color: '#33aa33', outline: '#1a5c1a', boss: false, w: 52, h: 80, hp: 115, spd: 4, def: 6,
+    moves: {
+      punch:    { name: 'Steady Jab', dmg: 8, startup: 4, active: 6, recovery: 7, range: 52, color: '#44cc44' },
+      kick:     { name: 'Dollar Kick', dmg: 10, startup: 5, active: 5, recovery: 9, range: 56, color: '#33aa33' },
+      special:  { name: 'Stack Sats', dmg: 6, startup: 5, active: 14, recovery: 10, range: 55, color: '#00ff44', multihit: 4, dash: 140 },
+      finisher: { name: 'COMPOUND', dmg: 44, startup: 10, active: 10, recovery: 16, range: 65, color: '#00ff00', launch: true, shakeScreen: true, unblockable: true }
+    }
+  },
+  {
+    id: 'tinkclaw', name: 'TinkClaw', type: 'Boss', style: 'Neon cyber predator',
+    color: '#ff1493', outline: '#9d00ff', boss: true, w: 54, h: 84, hp: 125, spd: 5, def: 6,
+    moves: {
+      punch:    { name: 'Claw Strike', dmg: 10, startup: 4, active: 6, recovery: 8, range: 58, color: '#00ffff' },
+      kick:     { name: 'Neon Kick', dmg: 13, startup: 5, active: 6, recovery: 9, range: 60, color: '#ff1493', dash: 100 },
+      special:  { name: 'Neon Burst', dmg: 20, startup: 8, active: 10, recovery: 12, range: 75, color: '#ff1493', projectile: true, projSpd: 10, projColor: '#00ffff' },
+      finisher: { name: 'CHAIN BREAK', dmg: 55, startup: 8, active: 12, recovery: 16, range: 70, color: '#ff1493', launch: true, shakeScreen: true, unblockable: true, steal: 0.2 }
+    }
+  }
+];
+
+// Select roster based on URL mode
+const FIGHTERS_COIN = FIGHTERS;
+const FIGHTERS_BOT = BOT_FIGHTERS;
+if (GAME_MODE === 'bot') {
+  FIGHTERS.length = 0;
+  BOT_FIGHTERS.forEach(f => FIGHTERS.push(f));
+}
+
 // ====================== LOCAL STORAGE ======================
-const STORAGE_KEY = 'coinclash_career';
+const STORAGE_KEY = GAME_MODE === 'bot' ? 'botclash_career' : 'coinclash_career';
 function defaultCareer() {
   return {
     wins: 0, losses: 0, perfects: 0, bestCombo: 0, totalDmg: 0, winStreak: 0, currentStreak: 0,
@@ -1797,11 +2334,12 @@ function shareResults() {
   const result = p1Won ? 'won' : 'lost';
   const combo = p1.maxCombo;
   const streak = career.currentStreak;
-  let text = `I just ${result} as ${fighter} in Coin Clash!`;
+  const gameName = GAME_MODE === 'bot' ? 'Bot Clash' : 'Coin Clash';
+  let text = `I just ${result} as ${fighter} in ${gameName}!`;
   if (p1Won && combo >= 3) text += ` ${combo}-hit combo!`;
   if (p1Won && streak >= 3) text += ` ${streak} win streak!`;
   if (p1Won && p1.hp === p1.maxHp) text += ' FLAWLESS!';
-  text += '\n\nPlay free: github.com/TinkClaw/coin-clash';
+  text += GAME_MODE === 'bot' ? '\n\nPlay free: tinkclaw.com/botclash' : '\n\nPlay free: github.com/TinkClaw/coin-clash';
   const url = 'https://x.com/intent/tweet?text=' + encodeURIComponent(text);
   window.open(url, '_blank', 'width=550,height=420');
 }
@@ -1858,7 +2396,8 @@ function buildSelect() {
   if (!bossOpen) {
     const nonBoss = FIGHTERS.filter(f => !f.boss).map(f => f.id);
     const beaten = (career.beaten || []).filter(id => nonBoss.includes(id));
-    unlockEl.textContent = `Beat all 8 fighters to unlock the boss (${beaten.length}/8)`;
+    const totalNonBoss = nonBoss.length;
+    unlockEl.textContent = `Beat all ${totalNonBoss} fighters to unlock the boss (${beaten.length}/${totalNonBoss})`;
   } else {
     unlockEl.textContent = '';
   }
