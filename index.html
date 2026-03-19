@@ -158,12 +158,12 @@
     }
     .share-btn:hover { background: #0d8ecf; transform: scale(1.03); }
 
-    .tkcl-footer {
+    .game-footer {
       margin-top: 10px; font-size: 0.6em; color: #333; text-align: center;
       letter-spacing: 1px;
     }
-    .tkcl-footer a { color: #ff1493; text-decoration: none; }
-    .tkcl-footer a:hover { text-decoration: underline; }
+    .game-footer a { color: #ff1493; text-decoration: none; }
+    .game-footer a:hover { text-decoration: underline; }
 
     .p2-hint {
       font-size: 0.7em; color: #ff6b6b; margin-top: 4px;
@@ -292,7 +292,7 @@
   <div class="p2-hint" id="p2-hint" style="display:none">
     P2: <span>Arrows</span> Move &nbsp; <span>Num1</span> Punch &nbsp; <span>Num2</span> Kick &nbsp; <span>Num3</span> Special &nbsp; <span>Num0</span> Block
   </div>
-  <div class="tkcl-footer">Powered by <a href="https://tinkclaw.com" target="_blank">TinkClaw</a> &mdash; $TKCL</div>
+  <div class="game-footer">Coin Clash &mdash; Open Source on <a href="https://github.com/TinkClaw/coin-clash" target="_blank">GitHub</a></div>
 </div>
 
 <div id="pause-overlay">
@@ -845,7 +845,7 @@ function drawTinkClaw(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, f
   ctx.stroke();
   ctx.fillStyle = '#ff1493'; ctx.font = 'bold 6px Arial'; ctx.textAlign = 'center';
   ctx.shadowColor = '#ff1493'; ctx.shadowBlur = 5;
-  ctx.fillText('TKCL', x, bodyY + 4 + breathe); ctx.shadowBlur = 0;
+  ctx.fillText('TC', x, bodyY + 4 + breathe); ctx.shadowBlur = 0;
   const armY = bodyY - 5 + breathe;
   drawLimb(ctx, x - f * 18, armY, x - f * 28, armY + 10, 6, '#9d00ff');
   const clawX = x + f * (24 + armExt * 32);
@@ -1736,7 +1736,7 @@ const FIGHTERS = [
     moves: {
       punch:    { name: 'Claw Strike', dmg: 10, startup: 4, active: 6, recovery: 8, range: 58, color: '#00ffff' },
       kick:     { name: 'Neon Kick', dmg: 13, startup: 5, active: 6, recovery: 9, range: 60, color: '#ff1493', dash: 100 },
-      special:  { name: 'Signal Burst', dmg: 20, startup: 8, active: 10, recovery: 12, range: 75, color: '#ff1493', projectile: true, projSpd: 10, projColor: '#00ffff' },
+      special:  { name: 'Neon Burst', dmg: 20, startup: 8, active: 10, recovery: 12, range: 75, color: '#ff1493', projectile: true, projSpd: 10, projColor: '#00ffff' },
       finisher: { name: 'CHAIN BREAK', dmg: 55, startup: 8, active: 12, recovery: 16, range: 70, color: '#ff1493', launch: true, shakeScreen: true, unblockable: true, steal: 0.2 }
     }
   }
@@ -1799,8 +1799,7 @@ function shareResults() {
   if (p1Won && combo >= 3) text += ` ${combo}-hit combo!`;
   if (p1Won && streak >= 3) text += ` ${streak} win streak!`;
   if (p1Won && p1.hp === p1.maxHp) text += ' FLAWLESS!';
-  text += '\n\nPlay free: tinkclaw.com/coinclash';
-  text += '\n$TKCL';
+  text += '\n\nPlay free: github.com/TinkClaw/coin-clash';
   const url = 'https://x.com/intent/tweet?text=' + encodeURIComponent(text);
   window.open(url, '_blank', 'width=550,height=420');
 }

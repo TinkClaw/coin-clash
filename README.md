@@ -55,4 +55,4 @@ MIT — see [LICENSE](LICENSE)
 
 ---
 
-Built by [TinkClaw](https://tinkclaw.com) | Powered by $TKCL
+Built by [TinkClaw](https://github.com/TinkClaw)
