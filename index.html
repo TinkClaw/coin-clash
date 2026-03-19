@@ -426,6 +426,21 @@
 </div>
 
 <script>
+// ====================== POLYFILLS ======================
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
+    const r = Array.isArray(radii) ? radii : [radii || 0];
+    const tl = r[0] || 0, tr = r[1] !== undefined ? r[1] : tl, br = r[2] !== undefined ? r[2] : tl, bl = r[3] !== undefined ? r[3] : tr;
+    this.moveTo(x + tl, y);
+    this.lineTo(x + w - tr, y); this.quadraticCurveTo(x + w, y, x + w, y + tr);
+    this.lineTo(x + w, y + h - br); this.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+    this.lineTo(x + bl, y + h); this.quadraticCurveTo(x, y + h, x, y + h - bl);
+    this.lineTo(x, y + tl); this.quadraticCurveTo(x, y, x + tl, y);
+    this.closePath();
+    return this;
+  };
+}
+
 // ====================== SOUND ENGINE ======================
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
@@ -1485,6 +1500,12 @@ function drawGeneric(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, fr
   drawLimb(ctx, x - f * 16, armY, x - f * 24, armY + 10, 5, data.color);
   const fistX = x + f * (20 + armExt * 30);
   drawLimb(ctx, x + f * 16, armY, fistX, armY - armExt * 8, 5, data.color);
+  if (armExt > 0.3) drawFist(ctx, fistX, armY - armExt * 8, 5, data.color);
+  // Kick leg extend
+  if (legExt > 0.3) {
+    const kickX = x + f * (15 + legExt * 35);
+    drawFist(ctx, kickX, y - 20, 5, data.outline);
+  }
   const headY = bodyY - 22 + breathe;
   drawRoundBody(ctx, x, headY, 16, 14, data.color, data.outline);
   drawEyes(ctx, x, headY - 2, f, 3, 2, 6);
@@ -1512,6 +1533,7 @@ class Fighter {
     this.attackArmExtend = 0; this.legExtend = 0;
     this.aiTimer = 0; this.aiReactTime = AI_REACT[difficulty];
     this.wasInAir = false; // Landing detection
+    this.trainingDummy = false;
     // Stats tracking
     this.totalDmgDealt = 0; this.hitsLanded = 0; this.maxCombo = 0;
   }
@@ -1637,7 +1659,7 @@ class Fighter {
           if (dist < move.range / 2 + other.w / 2) {
             if (move.multihit) {
               if (this.multihitCount < move.multihit) {
-                const interval = Math.max(1, Math.floor(move.active / move.multihit));
+                const interval = Math.max(1, Math.ceil(move.active / move.multihit));
                 if ((this.moveFrame - move.startup) % interval === 0) {
                   other.takeDamage(move.dmg, this, move);
                   this.multihitCount++;
@@ -2088,7 +2110,13 @@ function startMusic() {
 
 function stopMusic() {
   musicPlaying = false;
-  musicNodes.forEach(n => { try { if (n.stop) n.stop(); if (n.disconnect) n.disconnect(); } catch(e) {} });
+  musicNodes.forEach(n => {
+    try {
+      if (n.stop && n instanceof OscillatorNode) n.stop(0);
+      else if (n.stop) n.stop(); // interval cleanup objects
+      if (n.disconnect) n.disconnect();
+    } catch(e) {}
+  });
   musicNodes = [];
 }
 
@@ -2207,7 +2235,7 @@ function drawHUD() {
     ctx.font = 'bold 10px monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#00ffff';
     ctx.fillText('FRAME DATA', 12, 64);
     ctx.fillStyle = '#aaa'; ctx.font = '9px monospace';
-    const moves = selectedFighter.moves;
+    const moves = p1.data.moves;
     let my = 78;
     ['punch', 'kick', 'special', 'finisher'].forEach(k => {
       const m = moves[k];
@@ -2313,6 +2341,7 @@ function togglePause() {
 function quitToSelect() {
   paused = false;
   p2SelectedFighter = null;
+  tournament = null;
   stopMusic();
   document.getElementById('pause-overlay').classList.remove('show');
   document.getElementById('victory-overlay').classList.remove('show');
@@ -2383,8 +2412,10 @@ function startTournament() {
     round: 0, // 0=quarterfinal, 1=semi, 2=final
     matchIdx: 0,
     results: [[], [], []], // winners per round
-    playerSlot: shuffled.findIndex(f => f.id === selectedFighter.id)
+    playerSlot: shuffled.findIndex(f => f.id === selectedFighter.id),
+    playerAlive: true
   };
+  roundNum = 1; p1Rounds = 0; p2Rounds = 0;
   advanceTournament();
 }
 
@@ -2398,11 +2429,14 @@ function advanceTournament() {
     tournament.round++;
     tournament.matchIdx = 0;
     if (tournament.round >= 3) {
-      // Tournament over
+      // Tournament over — champion crowned
       const champion = tournament.results[2][0];
-      announceText = champion.id === selectedFighter.id ? 'TOURNAMENT CHAMPION!' : `${champion.name} WINS TOURNAMENT`;
+      const isPlayer = champion.id === selectedFighter.id;
+      announceText = isPlayer ? 'TOURNAMENT CHAMPION!' : `${champion.name} WINS TOURNAMENT`;
       announceTimer = 120; announceColor = '#ffd700';
       tournament = null;
+      // Return to select after announcement
+      setTimeout(() => { if (gameState !== STATE.SELECT) quitToSelect(); }, 2500);
       return;
     }
     advanceTournament();
@@ -2437,13 +2471,12 @@ function tournamentMatchOver(p1Won) {
   tournament.results[tournament.round].push(winner);
   tournament.matchIdx++;
   if (!p1Won) {
-    // Player eliminated
-    announceText = 'ELIMINATED'; announceTimer = 90; announceColor = '#ff4444';
+    // Player eliminated — show message then return to select
+    tournament.playerAlive = false;
     tournament = null;
     return;
   }
-  // Continue tournament
-  setTimeout(() => advanceTournament(), 1200);
+  // Continue tournament after victory overlay is dismissed
 }
 
 function startRound() {
@@ -2523,6 +2556,12 @@ function showVictory() {
 
 function rematch() {
   document.getElementById('victory-overlay').classList.remove('show');
+  // Tournament mode: advance bracket
+  if (gameMode === 'tournament' && tournament) {
+    roundNum = 1; p1Rounds = 0; p2Rounds = 0;
+    advanceTournament();
+    return;
+  }
   // Re-pick random enemy
   const pool = FIGHTERS.filter(c => c.id !== selectedFighter.id);
   enemyFighter = pool[Math.floor(Math.random() * pool.length)];
