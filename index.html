@@ -416,6 +416,22 @@
       text-transform: uppercase;
     }
     .online-input:focus { border-color: #00ffff; }
+    .voice-btn {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: rgba(255,20,147,0.08); border: 2px solid rgba(255,20,147,0.3);
+      color: #ff69b4; font-size: 20px; cursor: pointer; transition: all 0.3s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .voice-btn:hover { border-color: #ff1493; background: rgba(255,20,147,0.15); }
+    .voice-btn.listening {
+      border-color: #ff1493; background: rgba(255,20,147,0.2);
+      box-shadow: 0 0 20px rgba(255,20,147,0.4);
+      animation: voicePulse 1s ease infinite;
+    }
+    @keyframes voicePulse { 0%,100% { box-shadow: 0 0 10px rgba(255,20,147,0.3); } 50% { box-shadow: 0 0 25px rgba(255,20,147,0.6); } }
+    .online-input.voice-active { border-color: #ff1493; box-shadow: 0 0 15px rgba(255,20,147,0.3); }
+    .online-input .voice-letter { animation: letterPop 0.3s ease; }
+    @keyframes letterPop { 0% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
     .online-or { color: #555; font-size: 0.8em; letter-spacing: 3px; }
     .invite-link-row { display: flex; gap: 8px; align-items: center; }
     .invite-link-btn {
@@ -543,7 +559,11 @@
   <div id="online-create-section">
     <button class="pause-btn" onclick="onlineCreate()" style="border-color:#00ff9d;color:#00ff9d">Create Room</button>
     <div class="online-or">OR</div>
-    <input class="online-input" id="join-code-input" type="text" maxlength="6" placeholder="CODE" />
+    <div style="display:flex;align-items:center;gap:8px;justify-content:center">
+      <input class="online-input" id="join-code-input" type="text" maxlength="6" placeholder="CODE" />
+      <button class="voice-btn" id="voice-btn" onclick="toggleVoiceInput()" title="Speak the code">&#127908;</button>
+    </div>
+    <div id="voice-status" style="color:#ff69b4;font-size:0.75em;min-height:1.2em;margin-top:4px"></div>
     <button class="pause-btn" onclick="onlineJoin()" style="border-color:#00ffff;color:#00ffff;margin-top:6px">Join Room</button>
   </div>
   <div id="online-room-section" style="display:none;text-align:center">
@@ -3667,6 +3687,155 @@ function sendOnlineInputs() {
     }, 500);
   }
 })();
+
+// ====================== VOICE INPUT ======================
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let voiceRecognition = null;
+let voiceActive = false;
+
+// NATO phonetic alphabet + common letter pronunciations
+const LETTER_MAP = {
+  'alpha': 'A', 'bravo': 'B', 'charlie': 'C', 'delta': 'D', 'echo': 'E',
+  'foxtrot': 'F', 'golf': 'G', 'hotel': 'H', 'india': 'I', 'juliet': 'J',
+  'kilo': 'K', 'lima': 'L', 'mike': 'M', 'november': 'N', 'oscar': 'O',
+  'papa': 'P', 'quebec': 'Q', 'romeo': 'R', 'sierra': 'S', 'tango': 'T',
+  'uniform': 'U', 'victor': 'V', 'whiskey': 'W', 'x-ray': 'X', 'xray': 'X',
+  'yankee': 'Y', 'zulu': 'Z',
+  // Numbers (room codes are hex)
+  'zero': '0', 'one': '1', 'two': '2', 'three': '3', 'four': '4',
+  'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9',
+  // Common mishears
+  'be': 'B', 'bee': 'B', 'see': 'C', 'sea': 'C', 'dee': 'D',
+  'gee': 'G', 'jay': 'J', 'kay': 'K', 'el': 'L', 'em': 'M',
+  'en': 'N', 'oh': 'O', 'pee': 'P', 'cue': 'Q', 'queue': 'Q',
+  'are': 'R', 'ar': 'R', 'es': 'S', 'ass': 'S', 'tee': 'T', 'tea': 'T',
+  'you': 'U', 'vee': 'V', 'double you': 'W', 'ex': 'X', 'why': 'Y', 'zee': 'Z', 'zed': 'Z',
+  'too': '2', 'to': '2', 'for': '4', 'ate': '8',
+  // Single letter sounds
+  'a': 'A', 'b': 'B', 'c': 'C', 'd': 'D', 'e': 'E', 'f': 'F',
+};
+
+function toggleVoiceInput() {
+  if (!SpeechRecognition) {
+    document.getElementById('voice-status').textContent = 'Voice not supported in this browser';
+    return;
+  }
+  if (voiceActive) {
+    stopVoice();
+  } else {
+    startVoice();
+  }
+}
+
+function startVoice() {
+  const input = document.getElementById('join-code-input');
+  const btn = document.getElementById('voice-btn');
+  const status = document.getElementById('voice-status');
+
+  input.value = '';
+  voiceRecognition = new SpeechRecognition();
+  voiceRecognition.continuous = true;
+  voiceRecognition.interimResults = true;
+  voiceRecognition.lang = 'en-US';
+
+  voiceActive = true;
+  btn.classList.add('listening');
+  input.classList.add('voice-active');
+  status.textContent = 'Listening... say each letter';
+  status.style.color = '#ff69b4';
+
+  let lastProcessed = '';
+
+  voiceRecognition.onresult = (event) => {
+    // Get the latest final result
+    let transcript = '';
+    for (let i = 0; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        transcript += event.results[i][0].transcript;
+      }
+    }
+
+    if (transcript === lastProcessed) return;
+    const newPart = transcript.slice(lastProcessed.length).trim().toLowerCase();
+    lastProcessed = transcript;
+
+    if (!newPart) return;
+
+    // Parse spoken words into letters
+    const words = newPart.split(/\s+/);
+    let added = 0;
+    for (const word of words) {
+      if (input.value.length >= 6) break;
+      // Check map first
+      if (LETTER_MAP[word]) {
+        input.value += LETTER_MAP[word];
+        added++;
+        playSound('select', 0.15);
+      }
+      // Single char that's valid hex
+      else if (word.length === 1 && /[a-f0-9]/i.test(word)) {
+        input.value += word.toUpperCase();
+        added++;
+        playSound('select', 0.15);
+      }
+    }
+
+    if (added > 0) {
+      status.textContent = `Got ${input.value.length}/6 letters...`;
+      // Flash the input
+      input.style.borderColor = '#00ff9d';
+      setTimeout(() => { if (voiceActive) input.style.borderColor = '#ff1493'; }, 200);
+    }
+
+    // Auto-join when we have 6 characters
+    if (input.value.length >= 6) {
+      status.textContent = 'Code complete!';
+      status.style.color = '#00ff9d';
+      stopVoice();
+      playSound('announce', 0.3);
+      // Auto-join after brief pause
+      setTimeout(() => onlineJoin(), 600);
+    }
+  };
+
+  voiceRecognition.onerror = (event) => {
+    if (event.error === 'no-speech') {
+      status.textContent = 'No speech detected, try again';
+    } else if (event.error === 'not-allowed') {
+      status.textContent = 'Microphone access denied';
+      stopVoice();
+    } else {
+      status.textContent = 'Voice error: ' + event.error;
+    }
+  };
+
+  voiceRecognition.onend = () => {
+    // Restart if still active and code not complete
+    if (voiceActive && input.value.length < 6) {
+      try { voiceRecognition.start(); } catch(e) { stopVoice(); }
+    }
+  };
+
+  try {
+    voiceRecognition.start();
+  } catch(e) {
+    status.textContent = 'Could not start voice input';
+    stopVoice();
+  }
+}
+
+function stopVoice() {
+  voiceActive = false;
+  const btn = document.getElementById('voice-btn');
+  const input = document.getElementById('join-code-input');
+  btn.classList.remove('listening');
+  input.classList.remove('voice-active');
+  input.style.borderColor = '';
+  if (voiceRecognition) {
+    try { voiceRecognition.stop(); } catch(e) {}
+    voiceRecognition = null;
+  }
+}
 
 // ====================== TOUCH CONTROLS ======================
 if (isTouchDevice) {
