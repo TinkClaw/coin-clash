@@ -3245,7 +3245,7 @@ function drawHUD() {
   }
   // Power cooldown pips — P1
   if (p1.data.powers) {
-    const pipY = meterY + meterH + (p1.superMeter >= 100 ? 12 : 3);
+    const pipY = meterY + meterH + (p1.superMeter >= 100 ? 12 : 3), pipH = 3;
     ['power1','power2','power3'].forEach((pk, i) => {
       const power = p1.data.powers[pk]; if (!power) return;
       const cd = p1.powerCooldowns[pk]; const maxCd = power.cooldown;
