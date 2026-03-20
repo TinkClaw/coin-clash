@@ -35,10 +35,13 @@
 
     #select-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: linear-gradient(135deg, #0a0015, #1a0030, #0a0015);
+      background: linear-gradient(135deg, #0a0015, #1a0030, #0d0020, #0a0015);
+      background-size: 400% 400%; animation: selectBg 15s ease infinite;
       display: flex; flex-direction: column; align-items: center;
       overflow-y: auto; z-index: 100; padding: 20px;
+      -webkit-overflow-scrolling: touch;
     }
+    @keyframes selectBg { 0%,100% { background-position: 0% 50%; } 25% { background-position: 50% 0%; } 50% { background-position: 100% 50%; } 75% { background-position: 50% 100%; } }
     #select-overlay.hidden { display: none; }
     #select-overlay h1 {
       font-size: 2.5em;
@@ -68,11 +71,20 @@
     .roster-card {
       background: rgba(255,255,255,0.04); border: 2px solid #333;
       border-radius: 12px; padding: 10px 6px; text-align: center;
-      cursor: pointer; transition: all 0.2s;
+      cursor: pointer; transition: all 0.25s ease;
+      position: relative; overflow: hidden;
     }
-    .roster-card:hover { border-color: #ff1493; transform: translateY(-3px); box-shadow: 0 6px 20px rgba(255,20,147,0.3); }
-    .roster-card.sel { border-color: #00ffff; background: rgba(0,255,255,0.1); box-shadow: 0 0 20px rgba(0,255,255,0.3); }
-    .roster-card.boss { border-color: #ff1493; background: linear-gradient(135deg, rgba(255,20,147,0.1), rgba(0,255,255,0.1)); }
+    .roster-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse at center bottom, rgba(255,255,255,0.06) 0%, transparent 70%);
+      opacity: 0; transition: opacity 0.25s;
+    }
+    .roster-card:hover::before { opacity: 1; }
+    .roster-card:hover { border-color: #ff1493; transform: translateY(-4px) scale(1.02); box-shadow: 0 8px 25px rgba(255,20,147,0.25); }
+    .roster-card:active { transform: translateY(-1px) scale(0.98); }
+    .roster-card.sel { border-color: #00ffff; background: rgba(0,255,255,0.08); box-shadow: 0 0 25px rgba(0,255,255,0.25), inset 0 0 20px rgba(0,255,255,0.05); animation: selPulse 2s ease infinite; }
+    @keyframes selPulse { 0%,100% { box-shadow: 0 0 20px rgba(0,255,255,0.2), inset 0 0 15px rgba(0,255,255,0.03); } 50% { box-shadow: 0 0 30px rgba(0,255,255,0.35), inset 0 0 25px rgba(0,255,255,0.06); } }
+    .roster-card.boss { border-color: #ff1493; background: linear-gradient(135deg, rgba(255,20,147,0.08), rgba(0,255,255,0.08)); }
     .roster-card canvas { display: block; margin: 0 auto 5px; }
     .roster-card .r-name { font-size: 0.85em; font-weight: bold; }
     .roster-card .r-type { font-size: 0.6em; color: #ff69b4; text-transform: uppercase; letter-spacing: 1px; margin-top: 1px; }
@@ -95,13 +107,25 @@
     .move-tag .dmg { color: #ff6b6b; font-size: 0.85em; margin-left: 4px; }
 
     .fight-btn {
-      padding: 14px 50px; font-size: 1.2em; font-weight: bold; color: #fff;
-      background: linear-gradient(135deg, #ff1493, #9d00ff); border: none; border-radius: 14px;
+      padding: 14px 50px; font-size: 1.2em; font-weight: 900; color: #fff;
+      background: linear-gradient(135deg, #ff1493, #9d00ff, #ff1493); background-size: 200% 200%;
+      border: none; border-radius: 14px;
       cursor: pointer; text-transform: uppercase; letter-spacing: 3px; margin-top: 8px;
-      transition: all 0.2s; box-shadow: 0 4px 25px rgba(255,20,147,0.4);
+      transition: all 0.3s; box-shadow: 0 4px 25px rgba(255,20,147,0.4);
+      animation: fightBtnGlow 3s ease infinite;
+      position: relative; overflow: hidden;
     }
-    .fight-btn:hover { transform: scale(1.05); box-shadow: 0 6px 35px rgba(255,20,147,0.6); }
-    .fight-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+    @keyframes fightBtnGlow { 0%,100% { background-position: 0% 50%; box-shadow: 0 4px 25px rgba(255,20,147,0.4); } 50% { background-position: 100% 50%; box-shadow: 0 4px 35px rgba(157,0,255,0.5); } }
+    .fight-btn::after {
+      content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      animation: fightBtnSheen 4s ease infinite;
+    }
+    @keyframes fightBtnSheen { 0% { left: -100%; } 30%,100% { left: 150%; } }
+    .fight-btn:hover { transform: scale(1.05); box-shadow: 0 6px 40px rgba(255,20,147,0.6); }
+    .fight-btn:active { transform: scale(0.98); }
+    .fight-btn:disabled { opacity: 0.25; cursor: not-allowed; transform: none; animation: none; }
+    .fight-btn:disabled::after { display: none; }
 
     .controls-hint { color: #555; font-size: 0.7em; margin-top: 12px; text-align: center; line-height: 1.8; }
     .controls-hint span { color: #ffcc00; }
@@ -109,7 +133,9 @@
     .career-banner {
       display: flex; gap: 20px; align-items: center; justify-content: center;
       margin-bottom: 10px; padding: 8px 20px;
-      background: rgba(255,255,255,0.03); border: 1px solid #222; border-radius: 10px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,20,147,0.02), rgba(0,255,255,0.02));
+      border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
     }
     .career-stat { text-align: center; }
     .career-stat .c-val { font-size: 1.3em; font-weight: bold; }
@@ -2016,8 +2042,21 @@ class Fighter {
   }
 
   draw() {
+    // Ground shadow
+    if (this.state !== 'ko') {
+      const shadowScale = 1 - (GROUND_Y - this.y) / 200; // smaller shadow when airborne
+      const sw = this.w * 0.8 * Math.max(0.3, shadowScale);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(this.x, GROUND_Y + 2, sw, 5 * Math.max(0.3, shadowScale), 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.save();
-    if (this.flashTimer > 0 && this.flashTimer % 4 < 2) ctx.globalAlpha = 0.4;
+    // Hit flash — white overlay
+    if (this.flashTimer > 0 && this.flashTimer % 4 < 2) {
+      ctx.globalAlpha = 0.4;
+    }
     if (this.state === 'finishable' && frameCount % 8 < 4) ctx.globalAlpha = 0.35;
 
     if (this.state === 'ko') {
@@ -2030,14 +2069,26 @@ class Fighter {
     drawFighterBody(ctx, this.x, this.y, this.w, this.h, this.data, this.state, frameCount, this.facing,
       this.attackArmExtend, this.legExtend, this.blocking, this.shielded);
 
+    // White flash overlay on hit
+    if (this.flashTimer > 0 && this.flashTimer > 6) {
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fillRect(this.x - this.w, this.y - this.h - 20, this.w * 2, this.h + 40);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
     if (this.state === 'ko') ctx.restore();
     ctx.restore();
 
-    // Nameplate
+    // Nameplate with subtle background
     if (this.state !== 'ko') {
+      const name = this.data.name;
       ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center';
-      ctx.fillStyle = this.data.color; ctx.globalAlpha = 0.7;
-      ctx.fillText(this.data.name, this.x, this.y + 12);
+      const nw = ctx.measureText(name).width + 8;
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath(); ctx.roundRect(this.x - nw / 2, this.y + 4, nw, 13, 3); ctx.fill();
+      ctx.fillStyle = this.data.color; ctx.globalAlpha = 0.85;
+      ctx.fillText(name, this.x, this.y + 14);
       ctx.globalAlpha = 1;
     }
   }
@@ -2388,108 +2439,173 @@ function stopMusic() {
 
 // ====================== HUD ======================
 function drawHUD() {
-  const barW = W * 0.33, barH = 18, barY = 18, pad = 15;
+  const barW = W * 0.33, barH = 20, barY = 16, pad = 15;
+  const isMob = W < 600;
+  const bH = isMob ? 16 : barH;
 
-  // P1 HP
+  // HUD backdrop — subtle dark bar across top
+  ctx.fillStyle = 'rgba(5,0,12,0.5)';
+  ctx.fillRect(0, 0, W, barY + bH + 24);
+  ctx.fillStyle = currentStage.neon + '12';
+  ctx.fillRect(0, barY + bH + 23, W, 1);
+
+  // P1 HP bar with frame
   const p1Pct = Math.max(0, p1.hp / p1.maxHp);
   const p1DispPct = Math.max(0, p1.displayHp / p1.maxHp);
-  ctx.fillStyle = '#0a0a1a'; ctx.beginPath(); ctx.roundRect(pad, barY, barW, barH, 4); ctx.fill();
+  // Outer frame
+  ctx.strokeStyle = '#ffffff18'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(pad - 1, barY - 1, barW + 2, bH + 2, 5); ctx.stroke();
+  // Background
+  ctx.fillStyle = '#0a0a1a'; ctx.beginPath(); ctx.roundRect(pad, barY, barW, bH, 4); ctx.fill();
   // Damage flash (delayed red bar)
   if (p1DispPct > p1Pct) {
-    ctx.fillStyle = '#ff444488'; ctx.beginPath(); ctx.roundRect(pad, barY, barW * p1DispPct, barH, 4); ctx.fill();
+    ctx.fillStyle = '#ff444466'; ctx.beginPath(); ctx.roundRect(pad, barY, barW * p1DispPct, bH, 4); ctx.fill();
   }
-  ctx.fillStyle = p1Pct > 0.5 ? '#00ff9d' : p1Pct > 0.25 ? '#ffcc00' : '#ff4444';
-  ctx.beginPath(); ctx.roundRect(pad, barY, barW * p1Pct, barH, 4); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
-  ctx.beginPath(); ctx.roundRect(pad, barY, barW * p1Pct, barH / 2, [4,4,0,0]); ctx.fill();
-  ctx.font = 'bold 13px Arial'; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
-  ctx.fillText(p1.data.name, pad, barY - 4);
-  ctx.font = '10px Arial'; ctx.fillStyle = '#888';
-  ctx.fillText(Math.max(0, Math.round(p1.hp)) + ' HP', pad + barW - 36, barY + barH + 12);
+  // HP fill with gradient
+  const p1Color = p1Pct > 0.5 ? '#00ff9d' : p1Pct > 0.25 ? '#ffcc00' : '#ff4444';
+  const p1Grad = ctx.createLinearGradient(pad, barY, pad, barY + bH);
+  p1Grad.addColorStop(0, p1Color); p1Grad.addColorStop(1, p1Color + '88');
+  ctx.fillStyle = p1Grad; ctx.beginPath(); ctx.roundRect(pad, barY, barW * p1Pct, bH, 4); ctx.fill();
+  // Shine highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath(); ctx.roundRect(pad, barY, barW * p1Pct, bH * 0.4, [4,4,0,0]); ctx.fill();
+  // Neon glow when low
+  if (p1Pct < 0.25 && p1Pct > 0) { ctx.shadowColor = '#ff4444'; ctx.shadowBlur = 8; ctx.fillRect(pad, barY, barW * p1Pct, 1); ctx.shadowBlur = 0; }
+  // Name + HP text
+  ctx.font = `bold ${isMob ? 11 : 13}px Arial`; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+  ctx.fillText(p1.data.name.toUpperCase(), pad, barY - 3);
+  ctx.font = `${isMob ? 8 : 10}px Arial`; ctx.fillStyle = '#666';
+  ctx.fillText(Math.max(0, Math.round(p1.hp)) + '/' + p1.maxHp, pad + barW - (isMob ? 34 : 42), barY + bH + 11);
 
-  // P2 HP
+  // P2 HP bar with frame
   const p2Pct = Math.max(0, p2.hp / p2.maxHp);
   const p2DispPct = Math.max(0, p2.displayHp / p2.maxHp);
   const p2X = W - pad - barW;
-  ctx.fillStyle = '#0a0a1a'; ctx.beginPath(); ctx.roundRect(p2X, barY, barW, barH, 4); ctx.fill();
-  // Damage flash
+  ctx.strokeStyle = '#ffffff18'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(p2X - 1, barY - 1, barW + 2, bH + 2, 5); ctx.stroke();
+  ctx.fillStyle = '#0a0a1a'; ctx.beginPath(); ctx.roundRect(p2X, barY, barW, bH, 4); ctx.fill();
   if (p2DispPct > p2Pct) {
-    ctx.fillStyle = '#ff444488'; ctx.beginPath(); ctx.roundRect(p2X + barW * (1 - p2DispPct), barY, barW * p2DispPct, barH, 4); ctx.fill();
+    ctx.fillStyle = '#ff444466'; ctx.beginPath(); ctx.roundRect(p2X + barW * (1 - p2DispPct), barY, barW * p2DispPct, bH, 4); ctx.fill();
   }
-  ctx.fillStyle = p2Pct > 0.5 ? '#ff6b6b' : p2Pct > 0.25 ? '#ffcc00' : '#ff4444';
-  ctx.beginPath(); ctx.roundRect(p2X + barW * (1 - p2Pct), barY, barW * p2Pct, barH, 4); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
-  ctx.beginPath(); ctx.roundRect(p2X + barW * (1 - p2Pct), barY, barW * p2Pct, barH / 2, [4,4,0,0]); ctx.fill();
-  ctx.font = 'bold 13px Arial'; ctx.fillStyle = '#fff'; ctx.textAlign = 'right';
-  ctx.fillText(p2.data.name, W - pad, barY - 4);
-  ctx.font = '10px Arial'; ctx.fillStyle = '#888';
-  ctx.fillText(Math.max(0, Math.round(p2.hp)) + ' HP', p2X + 4, barY + barH + 12);
+  const p2Color = p2Pct > 0.5 ? '#ff6b6b' : p2Pct > 0.25 ? '#ffcc00' : '#ff4444';
+  const p2Grad = ctx.createLinearGradient(p2X, barY, p2X, barY + bH);
+  p2Grad.addColorStop(0, p2Color); p2Grad.addColorStop(1, p2Color + '88');
+  ctx.fillStyle = p2Grad; ctx.beginPath(); ctx.roundRect(p2X + barW * (1 - p2Pct), barY, barW * p2Pct, bH, 4); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath(); ctx.roundRect(p2X + barW * (1 - p2Pct), barY, barW * p2Pct, bH * 0.4, [4,4,0,0]); ctx.fill();
+  if (p2Pct < 0.25 && p2Pct > 0) { ctx.shadowColor = '#ff4444'; ctx.shadowBlur = 8; ctx.fillRect(p2X + barW * (1 - p2Pct), barY, barW * p2Pct, 1); ctx.shadowBlur = 0; }
+  ctx.font = `bold ${isMob ? 11 : 13}px Arial`; ctx.fillStyle = '#fff'; ctx.textAlign = 'right';
+  ctx.fillText(p2.data.name.toUpperCase(), W - pad, barY - 3);
+  ctx.font = `${isMob ? 8 : 10}px Arial`; ctx.fillStyle = '#666'; ctx.textAlign = 'left';
+  ctx.fillText(Math.max(0, Math.round(p2.hp)) + '/' + p2.maxHp, p2X + 3, barY + bH + 11);
 
-  // Timer
-  ctx.font = 'bold 26px Arial'; ctx.fillStyle = matchTimer <= 10 ? '#ff4444' : '#fff';
-  ctx.textAlign = 'center'; ctx.fillText(Math.ceil(matchTimer), W / 2, barY + 20);
-  ctx.font = '11px Arial'; ctx.fillStyle = '#666'; ctx.fillText(`Round ${roundNum}`, W / 2, barY - 4);
+  // Timer — centered diamond frame
+  const timerCx = W / 2, timerCy = barY + bH / 2;
+  const timerSize = isMob ? 22 : 28;
+  ctx.fillStyle = 'rgba(10,0,20,0.8)'; ctx.strokeStyle = '#ffffff22'; ctx.lineWidth = 1.5;
+  ctx.save(); ctx.translate(timerCx, timerCy); ctx.rotate(Math.PI / 4);
+  ctx.beginPath(); ctx.roundRect(-timerSize / 2, -timerSize / 2, timerSize, timerSize, 4); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  const timerColor = matchTimer <= 10 ? '#ff4444' : matchTimer <= 20 ? '#ffcc00' : '#fff';
+  ctx.font = `bold ${isMob ? 18 : 22}px Arial`; ctx.fillStyle = timerColor;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (matchTimer <= 10) { ctx.shadowColor = '#ff4444'; ctx.shadowBlur = 10; }
+  ctx.fillText(Math.ceil(matchTimer), timerCx, timerCy + 1);
+  ctx.shadowBlur = 0; ctx.textBaseline = 'alphabetic';
+  // Round label above timer
+  ctx.font = `${isMob ? 8 : 10}px Arial`; ctx.fillStyle = '#555';
+  ctx.fillText(`ROUND ${roundNum}`, timerCx, barY - 4);
 
-  // Round dots
+  // Round dots — with glow
   for (let i = 0; i < 2; i++) {
-    ctx.beginPath(); ctx.arc(W / 2 - 25 + i * 14, barY + 34, 4, 0, Math.PI * 2);
-    ctx.fillStyle = i < p1Rounds ? '#00ff9d' : '#222'; ctx.fill();
+    const dotX = timerCx - 22 + i * 12, dotY = barY + bH + 10;
+    const won = i < p1Rounds;
+    ctx.beginPath(); ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = won ? '#00ff9d' : '#1a1a2e'; ctx.fill();
+    if (won) { ctx.shadowColor = '#00ff9d'; ctx.shadowBlur = 6; ctx.fill(); ctx.shadowBlur = 0; }
   }
   for (let i = 0; i < 2; i++) {
-    ctx.beginPath(); ctx.arc(W / 2 + 15 + i * 14, barY + 34, 4, 0, Math.PI * 2);
-    ctx.fillStyle = i < p2Rounds ? '#ff6b6b' : '#222'; ctx.fill();
+    const dotX = timerCx + 14 + i * 12, dotY = barY + bH + 10;
+    const won = i < p2Rounds;
+    ctx.beginPath(); ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = won ? '#ff6b6b' : '#1a1a2e'; ctx.fill();
+    if (won) { ctx.shadowColor = '#ff6b6b'; ctx.shadowBlur = 6; ctx.fill(); ctx.shadowBlur = 0; }
   }
 
-  // Special cooldown
+  // Special cooldown bar — under P1 HP
   if (p1.specialCooldown > 0) {
     const cdPct = 1 - p1.specialCooldown / 120;
-    ctx.fillStyle = '#1a1a2e'; ctx.fillRect(pad, barY + barH + 18, 70, 3);
-    ctx.fillStyle = '#9d00ff'; ctx.fillRect(pad, barY + barH + 18, 70 * cdPct, 3);
-    ctx.font = '8px Arial'; ctx.fillStyle = '#555'; ctx.textAlign = 'left'; ctx.fillText('SPECIAL', pad, barY + barH + 28);
+    ctx.fillStyle = '#1a1a2e'; ctx.beginPath(); ctx.roundRect(pad, barY + bH + 16, 70, 4, 2); ctx.fill();
+    const cdGrad = ctx.createLinearGradient(pad, 0, pad + 70, 0);
+    cdGrad.addColorStop(0, '#9d00ff'); cdGrad.addColorStop(1, '#ff1493');
+    ctx.fillStyle = cdGrad; ctx.beginPath(); ctx.roundRect(pad, barY + bH + 16, 70 * cdPct, 4, 2); ctx.fill();
+    ctx.font = `${isMob ? 7 : 8}px Arial`; ctx.fillStyle = '#555'; ctx.textAlign = 'left'; ctx.fillText('SPECIAL', pad, barY + bH + 28);
   } else {
-    ctx.font = '8px Arial'; ctx.fillStyle = '#9d00ff'; ctx.textAlign = 'left'; ctx.fillText('L: SPECIAL READY', pad, barY + barH + 28);
+    ctx.font = `bold ${isMob ? 7 : 8}px Arial`; ctx.fillStyle = '#9d00ff'; ctx.textAlign = 'left';
+    const pulse = 0.6 + Math.sin(frameCount * 0.08) * 0.4;
+    ctx.globalAlpha = pulse;
+    ctx.fillText(isMob ? 'SP READY' : 'SPECIAL READY', pad, barY + bH + 28);
+    ctx.globalAlpha = 1;
   }
 
-  // Combo
+  // Combo counter — big, dynamic, with streak glow
   if (comboTimer > 0 && comboCount >= 2) {
-    const comboScale = 1 + Math.sin(comboTimer * 0.3) * 0.1;
-    ctx.font = `bold ${(18 + comboCount * 2) * comboScale}px Arial`; ctx.fillStyle = '#ffcc00';
-    ctx.textAlign = 'left'; ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 10;
-    ctx.fillText(`${comboCount} HIT COMBO!`, pad, H - 30); ctx.shadowBlur = 0;
+    const comboScale = 1 + Math.sin(comboTimer * 0.3) * 0.15;
+    const comboSize = Math.min(28 + comboCount * 3, 50) * comboScale;
+    ctx.font = `900 ${comboSize}px Arial`; ctx.fillStyle = '#ffcc00';
+    ctx.textAlign = 'left';
+    ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 15 + comboCount * 2;
+    ctx.fillText(`${comboCount}`, pad, H - 25);
+    ctx.shadowBlur = 0;
+    ctx.font = `bold ${isMob ? 12 : 14}px Arial`; ctx.fillStyle = '#fff';
+    ctx.fillText('HIT COMBO', pad + ctx.measureText(`${comboCount}`).width + 6, H - 25);
     comboTimer--;
   }
 
-  // Announcer
+  // Announcer — with outline for readability and scale pop
   if (announceTimer > 0) {
-    const s = Math.min(1, announceTimer / 10);
-    ctx.font = `bold ${44 * s}px Arial`; ctx.fillStyle = announceColor;
-    ctx.textAlign = 'center'; ctx.shadowColor = announceColor; ctx.shadowBlur = 25;
-    ctx.globalAlpha = Math.min(1, announceTimer / 15);
+    const progress = Math.min(1, (90 - announceTimer) / 8);
+    const scale = progress < 1 ? 0.5 + progress * 0.5 : 1;
+    const fadeOut = Math.min(1, announceTimer / 12);
+    const fontSize = Math.round((isMob ? 36 : 48) * scale);
+    ctx.font = `900 ${fontSize}px Arial`; ctx.textAlign = 'center';
+    ctx.globalAlpha = fadeOut;
+    // Text outline
+    ctx.strokeStyle = '#000'; ctx.lineWidth = isMob ? 3 : 4; ctx.lineJoin = 'round';
+    ctx.strokeText(announceText, W / 2, H / 2 - 30);
+    // Glow
+    ctx.shadowColor = announceColor; ctx.shadowBlur = 30;
+    ctx.fillStyle = announceColor;
     ctx.fillText(announceText, W / 2, H / 2 - 30);
     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
     announceTimer--;
   }
 
-  // Intro dialogue bubbles
+  // Intro dialogue bubbles — with rounded speech bubble
   if (introDialogueTimer > 0) {
     const alpha = Math.min(1, introDialogueTimer / 20);
     ctx.globalAlpha = alpha;
-    ctx.font = 'italic 13px Arial';
+    ctx.font = `italic ${isMob ? 11 : 13}px Arial`;
     // P1 dialogue
     if (introDialogue1 && p1) {
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      const tw1 = ctx.measureText(introDialogue1).width + 16;
-      ctx.fillRect(p1.x - tw1 / 2, p1.y - p1.h - 30, tw1, 20);
+      const tw1 = ctx.measureText(introDialogue1).width + 20;
+      const bx1 = p1.x - tw1 / 2, by1 = p1.y - p1.h - 34;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.beginPath(); ctx.roundRect(bx1, by1, tw1, 22, 8); ctx.fill();
+      // Speech tail
+      ctx.beginPath(); ctx.moveTo(p1.x - 5, by1 + 22); ctx.lineTo(p1.x, by1 + 30); ctx.lineTo(p1.x + 5, by1 + 22); ctx.fill();
       ctx.fillStyle = selectedFighter.color; ctx.textAlign = 'center';
-      ctx.fillText(introDialogue1, p1.x, p1.y - p1.h - 15);
+      ctx.fillText(introDialogue1, p1.x, by1 + 15);
     }
     // P2 dialogue
     if (introDialogue2 && p2) {
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      const tw2 = ctx.measureText(introDialogue2).width + 16;
-      ctx.fillRect(p2.x - tw2 / 2, p2.y - p2.h - 30, tw2, 20);
+      const tw2 = ctx.measureText(introDialogue2).width + 20;
+      const bx2 = p2.x - tw2 / 2, by2 = p2.y - p2.h - 34;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.beginPath(); ctx.roundRect(bx2, by2, tw2, 22, 8); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(p2.x - 5, by2 + 22); ctx.lineTo(p2.x, by2 + 30); ctx.lineTo(p2.x + 5, by2 + 22); ctx.fill();
       ctx.fillStyle = enemyFighter.color; ctx.textAlign = 'center';
-      ctx.fillText(introDialogue2, p2.x, p2.y - p2.h - 15);
+      ctx.fillText(introDialogue2, p2.x, by2 + 15);
     }
     ctx.globalAlpha = 1;
     introDialogueTimer--;
