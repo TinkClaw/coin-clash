@@ -2,13 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="theme-color" content="#0a0015"/>
+  <meta name="format-detection" content="telephone=no"/>
   <title>TinkClaw: Clash</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     @keyframes bgPulse { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+    html { height: 100%; overflow: hidden; }
     body {
       min-height: 100vh;
+      min-height: 100dvh;
       background: #0a0015;
       color: #fff;
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -20,6 +27,9 @@
       -webkit-touch-callout: none;
       -webkit-user-select: none;
       user-select: none;
+      padding-top: env(safe-area-inset-top, 0);
+      padding-left: env(safe-area-inset-left, 0);
+      padding-right: env(safe-area-inset-right, 0);
     }
     canvas#game { display: block; }
 
@@ -273,119 +283,166 @@
     .stats-grid .s-key { font-size: 0.8em; color: #666; }
     .stats-grid .s-val { font-size: 0.95em; font-weight: bold; }
 
-    /* Touch controls */
+    /* Touch controls — mobile-native */
     #touch-controls {
       display: none; position: fixed; bottom: 0; left: 0; right: 0;
-      height: 130px; z-index: 150; pointer-events: none;
+      height: 140px; z-index: 150; pointer-events: none;
+      padding-bottom: env(safe-area-inset-bottom, 0);
     }
     .touch-zone { position: absolute; pointer-events: auto; }
     .touch-dpad {
-      left: 10px; bottom: 10px; width: 120px; height: 120px;
+      left: 12px; bottom: 12px; width: 130px; height: 130px;
     }
     .touch-dpad-btn {
-      position: absolute; width: 38px; height: 38px; border-radius: 8px;
-      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      position: absolute; width: 44px; height: 44px; border-radius: 10px;
+      background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.2);
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px; color: rgba(255,255,255,0.4); pointer-events: auto;
+      font-size: 18px; color: rgba(255,255,255,0.5); pointer-events: auto;
+      -webkit-tap-highlight-color: transparent;
     }
-    .touch-dpad-btn.active { background: rgba(0,255,255,0.2); border-color: #00ffff; color: #00ffff; }
-    .touch-dpad-btn.t-up { top: 0; left: 41px; }
-    .touch-dpad-btn.t-down { bottom: 0; left: 41px; }
-    .touch-dpad-btn.t-left { top: 41px; left: 0; }
-    .touch-dpad-btn.t-right { top: 41px; right: 0; }
+    .touch-dpad-btn.active { background: rgba(0,255,255,0.25); border-color: #00ffff; color: #00ffff; }
+    .touch-dpad-btn.t-up { top: 0; left: 43px; }
+    .touch-dpad-btn.t-down { bottom: 0; left: 43px; }
+    .touch-dpad-btn.t-left { top: 43px; left: 0; }
+    .touch-dpad-btn.t-right { top: 43px; right: 0; }
     .touch-actions {
-      right: 10px; bottom: 10px; width: 150px; height: 120px;
+      right: 12px; bottom: 12px; width: 160px; height: 130px;
     }
     .touch-action-btn {
-      position: absolute; width: 44px; height: 44px; border-radius: 50%;
-      background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.2);
+      position: absolute; width: 52px; height: 52px; border-radius: 50%;
+      background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.25);
       display: flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: bold; color: rgba(255,255,255,0.5); pointer-events: auto;
+      font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.6); pointer-events: auto;
+      -webkit-tap-highlight-color: transparent;
     }
     .touch-action-btn.active { background: rgba(255,20,147,0.3); border-color: #ff1493; color: #ff1493; }
-    .touch-action-btn.t-punch { top: 0; left: 30px; border-color: rgba(255,204,0,0.3); }
-    .touch-action-btn.t-punch.active { border-color: #ffcc00; color: #ffcc00; background: rgba(255,204,0,0.2); }
-    .touch-action-btn.t-kick { top: 40px; left: 75px; border-color: rgba(255,107,107,0.3); }
-    .touch-action-btn.t-kick.active { border-color: #ff6b6b; color: #ff6b6b; background: rgba(255,107,107,0.2); }
-    .touch-action-btn.t-special { top: 0; right: 0; border-color: rgba(157,0,255,0.3); }
-    .touch-action-btn.t-special.active { border-color: #9d00ff; color: #9d00ff; background: rgba(157,0,255,0.2); }
-    .touch-action-btn.t-block { bottom: 0; left: 10px; border-color: rgba(0,255,255,0.3); }
-    .touch-action-btn.t-block.active { border-color: #00ffff; color: #00ffff; background: rgba(0,255,255,0.2); }
+    .touch-action-btn.t-punch { top: 0; left: 28px; border-color: rgba(255,204,0,0.4); }
+    .touch-action-btn.t-punch.active { border-color: #ffcc00; color: #ffcc00; background: rgba(255,204,0,0.25); }
+    .touch-action-btn.t-kick { top: 42px; left: 80px; border-color: rgba(255,107,107,0.4); }
+    .touch-action-btn.t-kick.active { border-color: #ff6b6b; color: #ff6b6b; background: rgba(255,107,107,0.25); }
+    .touch-action-btn.t-special { top: 0; right: 0; border-color: rgba(157,0,255,0.4); }
+    .touch-action-btn.t-special.active { border-color: #9d00ff; color: #9d00ff; background: rgba(157,0,255,0.25); }
+    .touch-action-btn.t-block { bottom: 0; left: 8px; border-color: rgba(0,255,255,0.4); }
+    .touch-action-btn.t-block.active { border-color: #00ffff; color: #00ffff; background: rgba(0,255,255,0.25); }
+    /* Pause button on mobile */
+    .touch-pause-btn {
+      position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+      width: 40px; height: 28px; border-radius: 6px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: bold; color: rgba(255,255,255,0.35); pointer-events: auto;
+      letter-spacing: 1px; -webkit-tap-highlight-color: transparent;
+    }
+    .touch-pause-btn:active { color: #ff1493; border-color: #ff1493; }
 
     @media (max-width: 700px) {
-      #select-overlay { padding: 12px 8px; }
-      #select-overlay h1 { font-size: 1.6em; }
-      .roster { grid-template-columns: repeat(3, 1fr); gap: 6px; }
-      .roster-card { padding: 6px 4px; }
+      /* Select screen */
+      #select-overlay { padding: 10px 6px; padding-top: calc(10px + env(safe-area-inset-top, 0)); -webkit-overflow-scrolling: touch; }
+      #select-overlay h1 { font-size: 1.5em; margin-bottom: 2px; }
+      .roster { grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 0 2px; }
+      .roster-card { padding: 6px 4px; min-height: 48px; -webkit-tap-highlight-color: transparent; }
       .roster-card .r-name { font-size: 0.7em; }
+      .roster-card .r-type { font-size: 0.5em; }
       .stat-bars { display: none; }
-      .fighter-preview { gap: 14px; min-height: 80px; }
-      .preview-box { min-width: 100px; }
-      .preview-box canvas { width: 70px; height: 70px; }
-      .preview-box .p-name { font-size: 0.95em; }
-      .preview-vs { font-size: 1.4em; }
-      .moves-preview { gap: 5px; }
-      .move-tag { padding: 3px 8px; font-size: 0.65em; }
-      .fight-btn { padding: 10px 30px; font-size: 1em; }
+      .fighter-preview { gap: 10px; min-height: 70px; }
+      .preview-box { min-width: 90px; }
+      .preview-box canvas { width: 60px; height: 60px; }
+      .preview-box .p-name { font-size: 0.85em; }
+      .preview-vs { font-size: 1.2em; padding: 0 6px; }
+      .moves-preview { gap: 4px; }
+      .move-tag { padding: 3px 7px; font-size: 0.6em; }
+      .fight-btn { padding: 14px 40px; font-size: 1.1em; min-height: 48px; width: 90%; max-width: 320px; border-radius: 16px; }
       .controls-hint { display: none; }
-      .career-banner { gap: 10px; padding: 6px 10px; flex-wrap: wrap; justify-content: center; }
-      .career-stat .c-val { font-size: 1em; }
+      .career-banner { gap: 8px; padding: 5px 8px; flex-wrap: wrap; justify-content: center; }
+      .career-stat .c-val { font-size: 0.95em; }
+      .career-stat .c-label { font-size: 0.5em; }
       .career-divider { display: none; }
-      .mode-row, .diff-row { flex-wrap: wrap; justify-content: center; gap: 5px; }
-      .mode-btn, .diff-btn { padding: 4px 12px; font-size: 0.7em; }
-      .subtitle { font-size: 0.7em; letter-spacing: 2px; }
-      .game-footer { font-size: 0.5em; }
-      .game-disclaimer { font-size: 0.55em; padding: 0 10px; }
-      .p2-hint { font-size: 0.6em; }
-      .roster-divider { font-size: 0.6em; }
+      .mode-row, .diff-row { flex-wrap: wrap; justify-content: center; gap: 4px; }
+      .mode-btn, .diff-btn { padding: 6px 12px; font-size: 0.7em; min-height: 36px; -webkit-tap-highlight-color: transparent; }
+      .subtitle { font-size: 0.65em; letter-spacing: 2px; }
+      .game-footer { font-size: 0.45em; }
+      .game-disclaimer { font-size: 0.5em; padding: 0 8px; }
+      .p2-hint { font-size: 0.55em; }
+      .roster-divider { font-size: 0.55em; }
+      .unlock-msg { font-size: 0.55em; }
 
-      /* Landing page mobile */
+      /* Landing page */
+      #landing-overlay { padding: env(safe-area-inset-top, 20px) 12px env(safe-area-inset-bottom, 12px); }
       #landing-overlay h1 { font-size: 2.2em; letter-spacing: 3px; }
-      .landing-sub { font-size: 0.7em; letter-spacing: 3px; }
+      .landing-sub { font-size: 0.65em; letter-spacing: 3px; }
       .landing-modes { flex-direction: column; gap: 0; align-items: center; }
-      .landing-card { width: 85vw; max-width: 320px; padding: 16px; }
-      .landing-card h2 { font-size: 1.2em; }
-      .landing-card p { font-size: 0.75em; }
-      .landing-vs { font-size: 1.8em; padding: 6px 0; }
-      .landing-preview { width: 90px; height: 75px; }
-      .landing-bottom { font-size: 0.6em; }
-      .landing-fighter-count { font-size: 0.6em; }
+      .landing-card { width: 85vw; max-width: 320px; padding: 14px; min-height: 48px; -webkit-tap-highlight-color: transparent; }
+      .landing-card h2 { font-size: 1.15em; }
+      .landing-card p { font-size: 0.7em; }
+      .landing-vs { font-size: 1.6em; padding: 4px 0; }
+      .landing-preview { width: 80px; height: 65px; }
+      .landing-bottom { font-size: 0.55em; }
+      .landing-fighter-count { font-size: 0.55em; }
 
-      /* Victory/pause overlays mobile */
-      #victory-overlay h2 { font-size: 1.6em; letter-spacing: 3px; }
-      .victory-sub { font-size: 0.8em; }
-      .stats-grid { gap: 4px 16px; font-size: 0.85em; }
-      .pause-btn { padding: 10px 24px; font-size: 0.85em; }
-      .share-btn { padding: 8px 20px; font-size: 0.8em; }
-      #pause-overlay h2 { font-size: 2em; letter-spacing: 4px; }
+      /* Overlays */
+      #victory-overlay, #pause-overlay, #leaderboard-overlay, #online-overlay, #name-prompt {
+        padding: env(safe-area-inset-top, 20px) 16px env(safe-area-inset-bottom, 16px);
+      }
+      #victory-overlay h2 { font-size: 1.5em; letter-spacing: 3px; }
+      .victory-sub { font-size: 0.75em; }
+      .stats-grid { gap: 3px 14px; font-size: 0.8em; }
+      .pause-btn { padding: 12px 28px; font-size: 0.9em; min-height: 48px; -webkit-tap-highlight-color: transparent; }
+      .share-btn { padding: 10px 24px; font-size: 0.85em; min-height: 48px; -webkit-tap-highlight-color: transparent; }
+      #pause-overlay h2 { font-size: 1.8em; letter-spacing: 4px; }
+      #leaderboard-overlay h2 { font-size: 1.2em !important; }
+      #lb-table { font-size: 0.7em !important; }
+      #player-name-input { width: 75vw !important; max-width: 280px !important; font-size: 1.2em !important; min-height: 48px !important; }
 
-      /* Leaderboard mobile */
-      #leaderboard-overlay h2 { font-size: 1.3em !important; }
-      #lb-table { font-size: 0.75em !important; }
+      /* Touch controls — enlarged for thumbs */
+      #touch-controls { height: 150px; padding-bottom: env(safe-area-inset-bottom, 0); }
+      .touch-dpad { left: max(8px, env(safe-area-inset-left, 8px)); bottom: calc(8px + env(safe-area-inset-bottom, 0)); width: 136px; height: 136px; }
+      .touch-dpad-btn { width: 46px; height: 46px; font-size: 20px; border-radius: 12px; }
+      .touch-dpad-btn.t-up { left: 45px; }
+      .touch-dpad-btn.t-down { left: 45px; }
+      .touch-dpad-btn.t-left { top: 45px; }
+      .touch-dpad-btn.t-right { top: 45px; }
+      .touch-actions { right: max(8px, env(safe-area-inset-right, 8px)); bottom: calc(8px + env(safe-area-inset-bottom, 0)); width: 168px; height: 136px; }
+      .touch-action-btn { width: 56px; height: 56px; font-size: 12px; }
+      .touch-action-btn.t-punch { top: 0; left: 30px; }
+      .touch-action-btn.t-kick { top: 44px; left: 84px; }
+      .touch-action-btn.t-special { top: 0; right: 0; }
+      .touch-action-btn.t-block { bottom: 0; left: 8px; }
 
-      /* Name prompt mobile */
-      #player-name-input { width: 70vw !important; max-width: 260px !important; }
-
-      /* Touch controls - bigger on small screens */
-      #touch-controls { height: 140px; }
-      .touch-dpad { left: 8px; bottom: 8px; width: 130px; height: 130px; }
-      .touch-dpad-btn { width: 42px; height: 42px; font-size: 20px; }
-      .touch-dpad-btn.t-up { left: 44px; }
-      .touch-dpad-btn.t-down { left: 44px; }
-      .touch-dpad-btn.t-left { top: 44px; }
-      .touch-dpad-btn.t-right { top: 44px; }
-      .touch-actions { right: 8px; bottom: 8px; width: 160px; height: 130px; }
-      .touch-action-btn { width: 50px; height: 50px; font-size: 11px; }
-
-      /* Online overlay mobile */
-      #online-overlay h2 { font-size: 1.3em; letter-spacing: 3px; }
-      .room-code-display { font-size: 1.8em; letter-spacing: 8px; }
-      .online-input { width: 160px; font-size: 1.2em; }
+      /* Online overlay */
+      #online-overlay h2 { font-size: 1.2em; letter-spacing: 3px; }
+      .room-code-display { font-size: 1.8em; letter-spacing: 8px; padding: 6px 16px; }
+      .online-input { width: 170px; font-size: 1.3em; min-height: 48px; }
       .invite-link-row { flex-direction: column; gap: 6px; }
+      .invite-link-btn { min-height: 44px; padding: 10px 20px; }
+      .voice-btn { width: 52px; height: 52px; font-size: 22px; }
 
-      /* Mute button */
-      .mute-btn { width: 32px; height: 32px; font-size: 14px; top: 8px; right: 8px; }
-      .mode-switch-btn { font-size: 0.6em; padding: 4px 8px; top: 8px; left: 8px; }
+      /* Mute + mode switch */
+      .mute-btn { width: 36px; height: 36px; font-size: 15px; top: calc(6px + env(safe-area-inset-top, 0)); right: calc(6px + env(safe-area-inset-right, 0)); }
+      .mode-switch-btn { font-size: 0.65em; padding: 5px 10px; top: calc(6px + env(safe-area-inset-top, 0)); left: calc(6px + env(safe-area-inset-left, 0)); min-height: 36px; }
+    }
+
+    /* Landscape mobile — shorter touch controls, wider layout */
+    @media (max-height: 500px) and (orientation: landscape) {
+      #touch-controls { height: 110px; }
+      .touch-dpad { width: 100px; height: 100px; bottom: 4px; left: max(4px, env(safe-area-inset-left, 4px)); }
+      .touch-dpad-btn { width: 34px; height: 34px; font-size: 14px; }
+      .touch-dpad-btn.t-up { left: 33px; }
+      .touch-dpad-btn.t-down { left: 33px; }
+      .touch-dpad-btn.t-left { top: 33px; }
+      .touch-dpad-btn.t-right { top: 33px; }
+      .touch-actions { width: 130px; height: 100px; bottom: 4px; right: max(4px, env(safe-area-inset-right, 4px)); }
+      .touch-action-btn { width: 42px; height: 42px; font-size: 9px; }
+      .touch-action-btn.t-punch { left: 22px; }
+      .touch-action-btn.t-kick { top: 34px; left: 64px; }
+      .touch-action-btn.t-special { right: 0; }
+      .touch-action-btn.t-block { left: 6px; }
+      .touch-pause-btn { width: 32px; height: 22px; font-size: 8px; }
+      #select-overlay { padding: 6px; }
+      #select-overlay h1 { font-size: 1.2em; }
+      .roster { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+      .roster-card canvas { width: 45px; height: 45px; }
+      .fight-btn { padding: 8px 24px; font-size: 0.9em; }
+      .fighter-preview { min-height: 60px; }
     }
 
     /* Online 2P overlay */
@@ -444,25 +501,35 @@
     @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
     .online-connected { color: #00ff9d; font-weight: bold; }
 
-    /* Portrait orientation hint */
+    /* Portrait orientation hint — shown briefly during gameplay */
     #rotate-hint {
-      display: none; position: fixed; bottom: 0; left: 0; right: 0;
-      background: linear-gradient(to top, rgba(10,0,21,0.95), transparent);
-      color: #ff69b4; font-size: 0.75em; text-align: center; padding: 8px;
-      z-index: 180; letter-spacing: 1px; pointer-events: none;
+      display: none; position: fixed; top: calc(env(safe-area-inset-top, 0) + 4px); left: 50%; transform: translateX(-50%);
+      background: rgba(10,0,21,0.9); border: 1px solid rgba(255,105,180,0.3); border-radius: 20px;
+      color: #ff69b4; font-size: 0.7em; text-align: center; padding: 6px 16px;
+      z-index: 180; letter-spacing: 1px; pointer-events: auto; cursor: pointer;
+      white-space: nowrap; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      transition: opacity 0.5s;
     }
-    @media (max-width: 700px) and (orientation: portrait) {
-      #rotate-hint { display: block; }
-    }
+    #rotate-hint.fade { opacity: 0; }
 
-    /* Extra small phones (< 380px) */
+    /* Extra small phones (< 380px, e.g. iPhone SE, Galaxy S) */
     @media (max-width: 380px) {
-      .roster { grid-template-columns: repeat(3, 1fr); gap: 4px; }
+      #select-overlay h1 { font-size: 1.2em; }
+      .roster { grid-template-columns: repeat(3, 1fr); gap: 3px; }
       .roster-card { padding: 4px 2px; border-radius: 8px; }
+      .roster-card canvas { width: 50px; height: 50px; }
       .roster-card .r-name { font-size: 0.6em; }
-      .landing-card { width: 90vw; padding: 12px; }
-      #landing-overlay h1 { font-size: 1.8em; }
-      .mode-btn, .diff-btn { padding: 3px 8px; font-size: 0.65em; }
+      .roster-card .r-type { display: none; }
+      .landing-card { width: 92vw; padding: 10px; }
+      #landing-overlay h1 { font-size: 1.7em; }
+      .landing-card h2 { font-size: 1em; }
+      .mode-btn, .diff-btn { padding: 4px 8px; font-size: 0.6em; }
+      .fight-btn { padding: 12px 20px; font-size: 0.95em; }
+      .fighter-preview { gap: 8px; min-height: 60px; }
+      .preview-box canvas { width: 50px; height: 50px; }
+      .preview-box .p-name { font-size: 0.75em; }
+      .career-banner { padding: 4px 6px; gap: 6px; }
+      .career-stat .c-val { font-size: 0.85em; }
     }
   </style>
 </head>
@@ -599,7 +666,7 @@
   </div>
 </div>
 
-<div id="rotate-hint">&#x21BB; Rotate to landscape for the best experience</div>
+<div id="rotate-hint" onclick="this.classList.add('fade');setTimeout(()=>this.style.display='none',500)">&#x21BB; Rotate for best experience &times;</div>
 <canvas id="game"></canvas>
 
 <div id="touch-controls">
@@ -609,10 +676,11 @@
     <div class="touch-dpad-btn t-left" data-key="a">&#9664;</div>
     <div class="touch-dpad-btn t-right" data-key="d">&#9654;</div>
   </div>
+  <div class="touch-pause-btn" id="touch-pause" onclick="togglePause()">| |</div>
   <div class="touch-zone touch-actions">
-    <div class="touch-action-btn t-punch" data-key="j">J</div>
+    <div class="touch-action-btn t-punch" data-key="j">P</div>
     <div class="touch-action-btn t-kick" data-key="k">K</div>
-    <div class="touch-action-btn t-special" data-key="l">L</div>
+    <div class="touch-action-btn t-special" data-key="l">SP</div>
     <div class="touch-action-btn t-block" data-key=" ">BLK</div>
   </div>
 </div>
@@ -2474,16 +2542,29 @@ let W, H, GROUND_Y, STAGE_LEFT, STAGE_RIGHT;
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 function resize() {
-  W = Math.min(window.innerWidth, 1100);
-  const touchPad = isTouchDevice ? 150 : 0; // reserve space for touch controls
-  H = Math.min(window.innerHeight - touchPad, isTouchDevice ? window.innerHeight - touchPad : 620);
-  H = Math.max(H, 280); // minimum playable height
+  // Use visualViewport for accurate mobile sizing (excludes keyboard, respects zoom)
+  const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+  const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  W = Math.min(vw, 1100);
+
+  if (isTouchDevice) {
+    // Reserve space for touch controls + safe area
+    const isLandscape = vw > vh;
+    const touchPad = isLandscape ? 115 : 155;
+    H = Math.max(vh - touchPad, 200);
+  } else {
+    H = Math.min(vh, 620);
+  }
   canvas.width = W; canvas.height = H;
-  GROUND_Y = H - (isTouchDevice ? 40 : 75); STAGE_LEFT = 25; STAGE_RIGHT = W - 25;
+  GROUND_Y = H - (isTouchDevice ? 35 : 75);
+  STAGE_LEFT = 25; STAGE_RIGHT = W - 25;
 }
-resize(); window.addEventListener('resize', resize);
-// Handle orientation change on mobile
-if (screen.orientation) screen.orientation.addEventListener('change', () => setTimeout(resize, 100));
+resize();
+window.addEventListener('resize', resize);
+// visualViewport resize is more reliable on mobile (keyboard, address bar, rotation)
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+// Fallback orientation handler
+if (screen.orientation) screen.orientation.addEventListener('change', () => setTimeout(resize, 150));
 
 // Difficulty
 let difficulty = 1; // 0=easy, 1=normal, 2=hard
@@ -2539,6 +2620,11 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 // Fix stuck keys on tab switch
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+// Prevent iOS double-tap zoom and bounce scroll on game canvas
+document.addEventListener('touchstart', e => {
+  if (e.target.tagName === 'CANVAS' || e.target.closest('#touch-controls')) e.preventDefault();
+}, { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
 
 function togglePause() {
   if (gameState === STATE.SELECT) return;
@@ -3382,7 +3468,15 @@ function startFight() {
     startRound();
   }
   // Show touch controls on mobile
-  if (isTouchDevice) document.getElementById('touch-controls').style.display = 'block';
+  if (isTouchDevice) {
+    document.getElementById('touch-controls').style.display = 'block';
+    // Show rotate hint in portrait
+    if (window.innerHeight > window.innerWidth) {
+      const hint = document.getElementById('rotate-hint');
+      hint.style.display = 'block'; hint.classList.remove('fade');
+      setTimeout(() => { hint.classList.add('fade'); setTimeout(() => hint.style.display = 'none', 500); }, 4000);
+    }
+  }
 }
 
 // ====================== LEADERBOARD ======================
@@ -3841,12 +3935,77 @@ function stopVoice() {
 if (isTouchDevice) {
   const tc = document.getElementById('touch-controls');
   const allBtns = tc.querySelectorAll('[data-key]');
-  allBtns.forEach(btn => {
-    const key = btn.dataset.key;
-    btn.addEventListener('touchstart', e => { e.preventDefault(); keys[key] = true; btn.classList.add('active'); ensureAudio(); }, { passive: false });
-    btn.addEventListener('touchend', e => { e.preventDefault(); keys[key] = false; btn.classList.remove('active'); }, { passive: false });
-    btn.addEventListener('touchcancel', e => { keys[key] = false; btn.classList.remove('active'); });
+  const activeTouches = new Map(); // touchId -> btn element
+
+  // Haptic feedback helper
+  function haptic(style) {
+    if (navigator.vibrate) navigator.vibrate(style === 'heavy' ? 25 : 10);
+  }
+
+  // Multi-touch: track which touch owns which button
+  tc.addEventListener('touchstart', e => {
+    e.preventDefault();
+    ensureAudio();
+    for (const touch of e.changedTouches) {
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (el && el.dataset && el.dataset.key) {
+        const key = el.dataset.key;
+        keys[key] = true;
+        el.classList.add('active');
+        activeTouches.set(touch.identifier, { el, key });
+        haptic('light');
+      }
+    }
+  }, { passive: false });
+
+  tc.addEventListener('touchmove', e => {
+    e.preventDefault();
+    // Handle sliding between buttons (e.g. sliding from left to right on dpad)
+    for (const touch of e.changedTouches) {
+      const prev = activeTouches.get(touch.identifier);
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (prev && el !== prev.el) {
+        // Left old button
+        keys[prev.key] = false;
+        prev.el.classList.remove('active');
+        // Entered new button?
+        if (el && el.dataset && el.dataset.key) {
+          const key = el.dataset.key;
+          keys[key] = true;
+          el.classList.add('active');
+          activeTouches.set(touch.identifier, { el, key });
+        } else {
+          activeTouches.delete(touch.identifier);
+        }
+      }
+    }
+  }, { passive: false });
+
+  tc.addEventListener('touchend', e => {
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+      const prev = activeTouches.get(touch.identifier);
+      if (prev) {
+        keys[prev.key] = false;
+        prev.el.classList.remove('active');
+        activeTouches.delete(touch.identifier);
+      }
+    }
+  }, { passive: false });
+
+  tc.addEventListener('touchcancel', e => {
+    for (const touch of e.changedTouches) {
+      const prev = activeTouches.get(touch.identifier);
+      if (prev) {
+        keys[prev.key] = false;
+        prev.el.classList.remove('active');
+        activeTouches.delete(touch.identifier);
+      }
+    }
   });
+
+  // Prevent ghost clicks
+  tc.addEventListener('click', e => e.preventDefault());
 }
 
 // Init: restore last fighter, show career
