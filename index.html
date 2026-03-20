@@ -313,17 +313,94 @@
     .touch-action-btn.t-block.active { border-color: #00ffff; color: #00ffff; background: rgba(0,255,255,0.2); }
 
     @media (max-width: 700px) {
+      #select-overlay { padding: 12px 8px; }
       #select-overlay h1 { font-size: 1.6em; }
       .roster { grid-template-columns: repeat(3, 1fr); gap: 6px; }
       .roster-card { padding: 6px 4px; }
       .roster-card .r-name { font-size: 0.7em; }
       .stat-bars { display: none; }
-      .fighter-preview { gap: 14px; min-height: 100px; }
-      .preview-box canvas { width: 80px; height: 80px; }
+      .fighter-preview { gap: 14px; min-height: 80px; }
+      .preview-box { min-width: 100px; }
+      .preview-box canvas { width: 70px; height: 70px; }
+      .preview-box .p-name { font-size: 0.95em; }
+      .preview-vs { font-size: 1.4em; }
       .moves-preview { gap: 5px; }
       .move-tag { padding: 3px 8px; font-size: 0.65em; }
       .fight-btn { padding: 10px 30px; font-size: 1em; }
       .controls-hint { display: none; }
+      .career-banner { gap: 10px; padding: 6px 10px; flex-wrap: wrap; justify-content: center; }
+      .career-stat .c-val { font-size: 1em; }
+      .career-divider { display: none; }
+      .mode-row, .diff-row { flex-wrap: wrap; justify-content: center; gap: 5px; }
+      .mode-btn, .diff-btn { padding: 4px 12px; font-size: 0.7em; }
+      .subtitle { font-size: 0.7em; letter-spacing: 2px; }
+      .game-footer { font-size: 0.5em; }
+      .game-disclaimer { font-size: 0.55em; padding: 0 10px; }
+      .p2-hint { font-size: 0.6em; }
+      .roster-divider { font-size: 0.6em; }
+
+      /* Landing page mobile */
+      #landing-overlay h1 { font-size: 2.2em; letter-spacing: 3px; }
+      .landing-sub { font-size: 0.7em; letter-spacing: 3px; }
+      .landing-modes { flex-direction: column; gap: 0; align-items: center; }
+      .landing-card { width: 85vw; max-width: 320px; padding: 16px; }
+      .landing-card h2 { font-size: 1.2em; }
+      .landing-card p { font-size: 0.75em; }
+      .landing-vs { font-size: 1.8em; padding: 6px 0; }
+      .landing-preview { width: 90px; height: 75px; }
+      .landing-bottom { font-size: 0.6em; }
+      .landing-fighter-count { font-size: 0.6em; }
+
+      /* Victory/pause overlays mobile */
+      #victory-overlay h2 { font-size: 1.6em; letter-spacing: 3px; }
+      .victory-sub { font-size: 0.8em; }
+      .stats-grid { gap: 4px 16px; font-size: 0.85em; }
+      .pause-btn { padding: 10px 24px; font-size: 0.85em; }
+      .share-btn { padding: 8px 20px; font-size: 0.8em; }
+      #pause-overlay h2 { font-size: 2em; letter-spacing: 4px; }
+
+      /* Leaderboard mobile */
+      #leaderboard-overlay h2 { font-size: 1.3em !important; }
+      #lb-table { font-size: 0.75em !important; }
+
+      /* Name prompt mobile */
+      #player-name-input { width: 70vw !important; max-width: 260px !important; }
+
+      /* Touch controls - bigger on small screens */
+      #touch-controls { height: 140px; }
+      .touch-dpad { left: 8px; bottom: 8px; width: 130px; height: 130px; }
+      .touch-dpad-btn { width: 42px; height: 42px; font-size: 20px; }
+      .touch-dpad-btn.t-up { left: 44px; }
+      .touch-dpad-btn.t-down { left: 44px; }
+      .touch-dpad-btn.t-left { top: 44px; }
+      .touch-dpad-btn.t-right { top: 44px; }
+      .touch-actions { right: 8px; bottom: 8px; width: 160px; height: 130px; }
+      .touch-action-btn { width: 50px; height: 50px; font-size: 11px; }
+
+      /* Mute button */
+      .mute-btn { width: 32px; height: 32px; font-size: 14px; top: 8px; right: 8px; }
+      .mode-switch-btn { font-size: 0.6em; padding: 4px 8px; top: 8px; left: 8px; }
+    }
+
+    /* Portrait orientation hint */
+    #rotate-hint {
+      display: none; position: fixed; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(to top, rgba(10,0,21,0.95), transparent);
+      color: #ff69b4; font-size: 0.75em; text-align: center; padding: 8px;
+      z-index: 180; letter-spacing: 1px; pointer-events: none;
+    }
+    @media (max-width: 700px) and (orientation: portrait) {
+      #rotate-hint { display: block; }
+    }
+
+    /* Extra small phones (< 380px) */
+    @media (max-width: 380px) {
+      .roster { grid-template-columns: repeat(3, 1fr); gap: 4px; }
+      .roster-card { padding: 4px 2px; border-radius: 8px; }
+      .roster-card .r-name { font-size: 0.6em; }
+      .landing-card { width: 90vw; padding: 12px; }
+      #landing-overlay h1 { font-size: 1.8em; }
+      .mode-btn, .diff-btn { padding: 3px 8px; font-size: 0.65em; }
     }
   </style>
 </head>
@@ -430,6 +507,7 @@
   </div>
 </div>
 
+<div id="rotate-hint">&#x21BB; Rotate to landscape for the best experience</div>
 <canvas id="game"></canvas>
 
 <div id="touch-controls">
@@ -574,8 +652,9 @@ if (GAME_MODE === 'landing') {
   window.addEventListener('resize', () => { bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight; });
 
   const particles = [];
+  const isMobile = window.innerWidth < 700;
   const colors = ['#ff1493', '#00ffff', '#ffd700', '#9d00ff', '#ff4400', '#33aa33'];
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < (isMobile ? 25 : 60); i++) {
     particles.push({
       x: Math.random() * bgCanvas.width, y: Math.random() * bgCanvas.height,
       vx: (Math.random() - 0.5) * 0.8, vy: (Math.random() - 0.5) * 0.8,
@@ -590,7 +669,7 @@ if (GAME_MODE === 'landing') {
     { c: '#ffd70015', s: 40 }, { c: '#00ffff15', s: 36 }, { c: '#ff149315', s: 44 },
     { c: '#9d00ff15', s: 38 }, { c: '#ff440015', s: 34 }, { c: '#33aa3315', s: 42 }
   ];
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < (isMobile ? 4 : 8); i++) {
     const sc = silColors[i % silColors.length];
     silhouettes.push({
       x: Math.random() * bgCanvas.width, y: Math.random() * bgCanvas.height,
@@ -2299,11 +2378,15 @@ const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 function resize() {
   W = Math.min(window.innerWidth, 1100);
-  H = Math.min(window.innerHeight, isTouchDevice ? window.innerHeight - 100 : 620);
+  const touchPad = isTouchDevice ? 150 : 0; // reserve space for touch controls
+  H = Math.min(window.innerHeight - touchPad, isTouchDevice ? window.innerHeight - touchPad : 620);
+  H = Math.max(H, 280); // minimum playable height
   canvas.width = W; canvas.height = H;
-  GROUND_Y = H - (isTouchDevice ? 55 : 75); STAGE_LEFT = 25; STAGE_RIGHT = W - 25;
+  GROUND_Y = H - (isTouchDevice ? 40 : 75); STAGE_LEFT = 25; STAGE_RIGHT = W - 25;
 }
 resize(); window.addEventListener('resize', resize);
+// Handle orientation change on mobile
+if (screen.orientation) screen.orientation.addEventListener('change', () => setTimeout(resize, 100));
 
 // Difficulty
 let difficulty = 1; // 0=easy, 1=normal, 2=hard
