@@ -9,6 +9,7 @@
   <meta name="theme-color" content="#0a0015"/>
   <meta name="format-detection" content="telephone=no"/>
   <title>TinkClaw: Clash</title>
+  <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js" defer></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     @keyframes bgPulse { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
@@ -605,6 +606,9 @@
 </div>
 
 <button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle Sound">&#9834;</button>
+<button class="mute-btn" id="wallet-btn" onclick="showTokenGate()" title="Connect Wallet" style="right:auto;left:12px;background:linear-gradient(135deg,#9d00ff44,#ff149344);font-size:12px">
+  <span id="wallet-label">$TKCL</span>
+</button>
 <button class="mode-switch-btn" id="mode-switch-btn" onclick="window.location.pathname='/clash'">&#8592; Modes</button>
 
 <div id="select-overlay">
@@ -617,6 +621,7 @@
     <button class="mode-btn" data-mode="online" onclick="setMode('online')">Online 2P</button>
     <button class="mode-btn" data-mode="training" onclick="setMode('training')">Training</button>
     <button class="mode-btn" data-mode="tournament" onclick="setMode('tournament')">Tournament</button>
+    <button class="mode-btn" data-mode="arena" onclick="setMode('arena')" style="background:linear-gradient(135deg,#9d00ff22,#ff149322)">AI Arena</button>
   </div>
   <div class="diff-row" id="diff-row">
     <button class="diff-btn" data-diff="0" onclick="setDifficulty(0)">Easy</button>
@@ -624,6 +629,8 @@
     <button class="diff-btn" data-diff="2" onclick="setDifficulty(2)">Hard</button>
     <button class="reset-btn" onclick="resetStats()">Reset Stats</button>
     <button class="reset-btn" onclick="openLeaderboard()" style="background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000">Leaderboard</button>
+    <button class="reset-btn" onclick="showGovernance()" style="background:linear-gradient(135deg,#9d00ff44,#ff149344);color:#9d00ff;border-color:#9d00ff44">Vote</button>
+    <button class="reset-btn" onclick="showStakeModal()" style="background:linear-gradient(135deg,#ffd70044,#ff8c0044);color:#ffd700;border-color:#ffd70044">Stake</button>
   </div>
   <div class="mod-row" id="mod-row">
     <button class="mod-btn" data-mod="bighead" onclick="toggleMod('bighead')">Big Head</button>
@@ -634,8 +641,9 @@
     <button class="mod-btn" data-mod="mirror" onclick="toggleMod('mirror')">Mirror</button>
   </div>
   <div class="unlock-msg" id="unlock-msg"></div>
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
     <button class="random-btn" onclick="pickRandom()">? RANDOM</button>
+    <button class="random-btn" onclick="promptImportDNA()" style="background:linear-gradient(135deg,#9d00ff,#ff1493);font-size:0.75em;padding:6px 12px">IMPORT DNA</button>
   </div>
   <div class="roster" id="roster"></div>
   <div class="fighter-preview" id="fighter-preview"></div>
@@ -644,7 +652,8 @@
   <div class="controls-hint" id="controls-hint">
     <span>A/D</span> Move &nbsp; <span>W</span> Jump &nbsp; <span>S</span> Crouch &nbsp;
     <span>J</span> Punch &nbsp; <span>K</span> Kick &nbsp; <span>L</span> Special &nbsp;
-    <span>Space</span> Block &nbsp; <span>J+K</span> Finisher (when FINISH HIM!) &nbsp; <span>T</span> Taunt &nbsp; <span>Esc</span> Pause
+    <span>Space</span> Block &nbsp; <span>J+K</span> Finisher &nbsp; <span>J+K+L</span> Ultimate &nbsp;
+    <span>S+L</span> Power1 &nbsp; <span>Fwd+L</span> Power2 &nbsp; <span>Back+L</span> Power3 &nbsp; <span>Esc</span> Pause
   </div>
   <div class="p2-hint" id="p2-hint" style="display:none">
     P2: <span>Arrows</span> Move &nbsp; <span>Num1</span> Punch &nbsp; <span>Num2</span> Kick &nbsp; <span>Num3</span> Special &nbsp; <span>Num0</span> Block
@@ -686,6 +695,12 @@
     </div>
     <div id="voice-status" style="color:#ff69b4;font-size:0.75em;min-height:1.2em;margin-top:4px"></div>
     <button class="pause-btn" onclick="onlineJoin()" style="border-color:#00ffff;color:#00ffff;margin-top:6px">Join Room</button>
+    <div class="online-or">OR</div>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap">
+      <input class="online-input" id="x-handle-input" type="text" maxlength="20" placeholder="@their_handle" style="width:140px" />
+      <button class="pause-btn" onclick="challengeViaX()" style="border-color:#1da1f2;color:#1da1f2;margin:0;padding:8px 14px;font-size:0.8em">Challenge via X</button>
+    </div>
+    <div style="font-size:0.65em;color:#666;margin-top:4px">Your X handle: <input id="my-x-handle" type="text" maxlength="20" placeholder="@your_handle" style="background:#1a1a2e;border:1px solid #333;color:#fff;border-radius:4px;padding:2px 6px;font-size:1em;width:110px" /></div>
   </div>
   <div id="online-room-section" style="display:none;text-align:center">
     <div class="online-status">Room Code</div>
@@ -693,6 +708,7 @@
     <div class="invite-link-row" style="margin-top:10px;justify-content:center">
       <button class="invite-link-btn" onclick="copyInviteLink()">Copy Invite Link</button>
       <button class="invite-link-btn" onclick="shareInvite()" style="background:linear-gradient(135deg,#1da1f2,#0d8ecf)">Share</button>
+      <button class="invite-link-btn" onclick="shareXChallenge()" style="background:linear-gradient(135deg,#1da1f2,#000)">Challenge on X</button>
     </div>
     <div class="online-waiting" id="online-waiting" style="margin-top:14px">Waiting for opponent...</div>
   </div>
@@ -716,7 +732,32 @@
   <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
     <button class="pause-btn" onclick="rematch()" style="background:linear-gradient(135deg,#ff1493,#9d00ff);border-color:#ff1493;">Rematch</button>
     <button class="share-btn" onclick="shareResults()">Share on X</button>
+    <button class="share-btn" id="x-challenge-btn" onclick="postVictoryChallenge()" style="background:linear-gradient(135deg,#1da1f2,#000);display:none">Challenge Next on X</button>
+    <button class="share-btn" onclick="shareDNA()" style="background:linear-gradient(135deg,#9d00ff,#ff1493);margin-left:8px">Share DNA</button>
+    <button class="share-btn" onclick="mintFighterNFT()" style="background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000">Mint NFT</button>
     <button class="pause-btn" onclick="quitToSelect()">New Fighter</button>
+  </div>
+</div>
+
+<div id="token-gate-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:none;align-items:center;justify-content:center">
+  <div style="background:#111;border:2px solid #9d00ff;border-radius:16px;padding:24px 32px;max-width:400px;text-align:center;color:#fff;font-family:Arial">
+    <h2 style="color:#9d00ff;margin:0 0 12px;font-size:1.4em">$TKCL EVOLUTION</h2>
+    <div style="color:#aaa;font-size:0.85em;line-height:1.5;margin-bottom:16px">
+      <div style="display:flex;gap:12px;justify-content:center;margin-bottom:12px">
+        <div style="flex:1;padding:12px;background:#1a1a2e;border-radius:8px;border:1px solid #333">
+          <div style="color:#00ff9d;font-weight:bold;font-size:0.9em">FREE</div>
+          <div style="font-size:0.75em;margin-top:4px">EVO 1-4<br>Basic adaptation<br>Standard AI</div>
+        </div>
+        <div style="flex:1;padding:12px;background:#1a1a2e;border-radius:8px;border:1px solid #9d00ff">
+          <div style="color:#9d00ff;font-weight:bold;font-size:0.9em">$TKCL HOLDER</div>
+          <div style="font-size:0.75em;margin-top:4px">Uncapped EVO<br>All traits + auras<br>DNA export<br>AI Arena access</div>
+        </div>
+      </div>
+    </div>
+    <div id="wallet-status" style="margin-bottom:12px;font-size:0.8em;color:#666"></div>
+    <button id="connect-wallet-btn" onclick="connectWallet()" style="padding:10px 24px;background:linear-gradient(135deg,#9d00ff,#ff1493);color:#fff;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:0.9em;margin-bottom:8px">Connect Phantom Wallet</button>
+    <br>
+    <button onclick="closeTokenGate()" style="padding:8px 20px;background:transparent;color:#666;border:1px solid #333;border-radius:8px;cursor:pointer;font-size:0.8em;margin-top:4px">Continue Free</button>
   </div>
 </div>
 
@@ -737,6 +778,7 @@
     <div class="touch-action-btn t-kick" data-key="k">K</div>
     <div class="touch-action-btn t-special" data-key="l">SP</div>
     <div class="touch-action-btn t-block" data-key=" ">BLK</div>
+    <div class="touch-action-btn" data-key="ult" style="background:linear-gradient(135deg,#9d00ff44,#ff149344);border-color:#ff1493;font-size:9px;width:38px;height:38px;line-height:38px" onclick="if(p1 && p1.superMeter >= 100) p1.startPower('ultimate')">ULT</div>
   </div>
 </div>
 
@@ -846,6 +888,78 @@ function playSound(type, vol = 0.3) {
       osc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
       g.gain.setValueAtTime(vol * 0.3, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
       osc.connect(g); osc.start(now); osc.stop(now + 0.08);
+    } else if (type === 'power') {
+      // Deep whoosh + bass tone for power moves
+      const osc = audioCtx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+      osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+      g.gain.setValueAtTime(vol * 0.7, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.connect(g); osc.start(now); osc.stop(now + 0.35);
+    } else if (type === 'ultimate') {
+      // Rising screech → bass boom → shimmer
+      const o1 = audioCtx.createOscillator(); o1.type = 'sawtooth'; o1.frequency.setValueAtTime(200, now);
+      o1.frequency.exponentialRampToValueAtTime(1500, now + 0.15);
+      const g1 = audioCtx.createGain(); g1.connect(audioCtx.destination);
+      g1.gain.setValueAtTime(vol * 0.8, now); g1.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      o1.connect(g1); o1.start(now); o1.stop(now + 0.2);
+      const o2 = audioCtx.createOscillator(); o2.type = 'sine'; o2.frequency.setValueAtTime(60, now + 0.15);
+      o2.frequency.exponentialRampToValueAtTime(25, now + 0.6);
+      const g2 = audioCtx.createGain(); g2.connect(audioCtx.destination);
+      g2.gain.setValueAtTime(vol * 1.2, now + 0.15); g2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      o2.connect(g2); o2.start(now + 0.15); o2.stop(now + 0.6);
+      // Shimmer
+      [1046.5, 1318.5].forEach((freq, i) => {
+        const os = audioCtx.createOscillator(); os.type = 'triangle';
+        const gs = audioCtx.createGain(); gs.connect(audioCtx.destination);
+        os.frequency.setValueAtTime(freq, now + 0.2 + i * 0.05);
+        gs.gain.setValueAtTime(vol * 0.3, now + 0.2 + i * 0.05);
+        gs.gain.exponentialRampToValueAtTime(0.001, now + 0.5 + i * 0.05);
+        os.connect(gs); os.start(now + 0.2 + i * 0.05); os.stop(now + 0.5 + i * 0.05);
+      });
+    } else if (type === 'counter') {
+      // Sharp metallic reversal
+      const osc = audioCtx.createOscillator(); osc.type = 'square'; osc.frequency.setValueAtTime(1200, now);
+      osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+      g.gain.setValueAtTime(vol * 0.6, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.connect(g); osc.start(now); osc.stop(now + 0.12);
+    } else if (type === 'buff') {
+      // Ascending shimmer
+      [440, 554, 660].forEach((freq, i) => {
+        const os = audioCtx.createOscillator(); os.type = 'sine';
+        const gs = audioCtx.createGain(); gs.connect(audioCtx.destination);
+        os.frequency.setValueAtTime(freq, now + i * 0.06);
+        gs.gain.setValueAtTime(vol * 0.4, now + i * 0.06);
+        gs.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.2);
+        os.connect(gs); os.start(now + i * 0.06); os.stop(now + i * 0.06 + 0.2);
+      });
+    } else if (type === 'heal') {
+      // Soft ascending chime
+      [523.25, 659.25, 783.99].forEach((freq, i) => {
+        const os = audioCtx.createOscillator(); os.type = 'sine';
+        const gs = audioCtx.createGain(); gs.connect(audioCtx.destination);
+        os.frequency.setValueAtTime(freq, now + i * 0.1);
+        gs.gain.setValueAtTime(vol * 0.35, now + i * 0.1);
+        gs.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.25);
+        os.connect(gs); os.start(now + i * 0.1); os.stop(now + i * 0.1 + 0.25);
+      });
+    } else if (type === 'evolve') {
+      // Rising arpeggio — C5 E5 G5 C6 shimmer
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      notes.forEach((freq, i) => {
+        const o = audioCtx.createOscillator(); o.type = 'triangle';
+        const og = audioCtx.createGain(); og.connect(audioCtx.destination);
+        o.frequency.setValueAtTime(freq, now + i * 0.08);
+        og.gain.setValueAtTime(vol * 0.5, now + i * 0.08);
+        og.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
+        o.connect(og); o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.3);
+        // Shimmer detune
+        const o2 = audioCtx.createOscillator(); o2.type = 'sine';
+        const og2 = audioCtx.createGain(); og2.connect(audioCtx.destination);
+        o2.frequency.setValueAtTime(freq * 1.005, now + i * 0.08);
+        og2.gain.setValueAtTime(vol * 0.2, now + i * 0.08);
+        og2.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.25);
+        o2.connect(og2); o2.start(now + i * 0.08); o2.stop(now + i * 0.08 + 0.25);
+      });
     }
   } catch(e) { /* audio not available */ }
 }
@@ -1842,13 +1956,21 @@ function drawGeneric(ctx, x, y, w, h, data, f, breathe, walk, armExt, legExt, fr
 // ====================== FIGHTER CLASS ======================
 class Fighter {
   constructor(data, x, facing, isAI = false) {
-    this.data = data;
+    // Apply EVO stat bonuses — evolved fighters get up to ±10% stats
+    const evo = getEvo(data.id);
+    const evoScale = Math.min(evo.level, 20) / 20; // caps at level 20
+    const hpMod = 1 + evoScale * 0.1 * (evo.dna.defense > 0 ? 1 : 0);
+    const spdMod = 1 + evoScale * 0.1 * (evo.dna.speed > 0 ? 1 : 0);
+    const defMod = evoScale * 2 * (evo.dna.defense > 0 ? evo.dna.defense : 0);
+    this.data = { ...data, spd: data.spd * spdMod, def: data.def + defMod };
+    this.evoRef = evo; // Store evo reference for AI use
+    this.evoLevel = evo.level;
     this.x = x; this.y = GROUND_Y;
     this.vx = 0; this.vy = 0;
     this.facing = facing;
     this.w = data.w; this.h = data.h;
-    this.hp = data.hp; this.maxHp = data.hp;
-    this.displayHp = data.hp; // For smooth HP bar
+    this.hp = Math.round(data.hp * hpMod); this.maxHp = Math.round(data.hp * hpMod);
+    this.displayHp = this.maxHp; // For smooth HP bar
     this.isAI = isAI;
     this.state = 'idle'; this.stateTimer = 0;
     this.currentMove = null; this.moveFrame = 0;
@@ -1864,12 +1986,32 @@ class Fighter {
     this.trainingDummy = false;
     // Stats tracking
     this.totalDmgDealt = 0; this.hitsLanded = 0; this.maxCombo = 0;
+    // Powers system
+    this.superMeter = 0; // 0-100
+    this.powerCooldowns = { power1: 0, power2: 0, power3: 0 };
+    this.currentPowerKey = null;
+    this.activeBuff = null; // { type, value, timer, color, stacks }
+    this.counterStance = false; this.counterTimer = 0; this.counterMove = null;
+    this.hitCount4 = 0; // for compound passive
+    this.stackCount = 0; // for DCA stacking
+    this.activeDOT = null; // { dmg, timer, color }
   }
 
   get onGround() { return this.y >= GROUND_Y; }
 
   takeDamage(dmg, attacker, move) {
     if (this.invincible > 0) return;
+    // Counter stance check
+    if (this.counterStance && !move.unblockable) {
+      this.counterStance = false; this.counterTimer = 0;
+      const cDmg = this.counterMove ? this.counterMove.dmg : 20;
+      spawnPowerText('COUNTERED!', this.data.color);
+      spawnParticles(this.x, this.y - this.h / 2, this.data.color, 15);
+      playSound('counter', 0.5);
+      addCommentary('counterHit', 3, this.data.color);
+      attacker.takeDamage(cDmg, this, this.counterMove || move);
+      return;
+    }
     if (this.shielded && !move.unblockable) {
       this.shieldTimer = 0; this.shielded = false;
       spawnParticles(this.x, this.y - this.h / 2, '#00ffff', 8);
@@ -1888,8 +2030,49 @@ class Fighter {
     }
     const defMult = Math.max(0.4, 1 - this.data.def * 0.018);
     dmg = Math.round(dmg * defMult);
+    // Buff: armor reduces damage
+    if (this.activeBuff && (this.activeBuff.type === 'armor' || this.activeBuff.type === 'wall' || this.activeBuff.type === 'absorb')) {
+      dmg = Math.round(dmg * (1 - this.activeBuff.value));
+    }
+    // Buff: attacker damage boost
+    if (attacker.activeBuff && (attacker.activeBuff.type === 'damage' || attacker.activeBuff.type === 'regime' || attacker.activeBuff.type === 'flashloan')) {
+      dmg = Math.round(dmg * attacker.activeBuff.value);
+    }
+    // Buff: rage (Liquidator — more damage when lower HP)
+    if (attacker.activeBuff && attacker.activeBuff.type === 'rage') {
+      const hpPct = attacker.hp / attacker.maxHp;
+      if (hpPct < 0.5) dmg = Math.round(dmg * (1 + (1 - hpPct) * 0.5));
+    }
+    // Buff: crit (Target Lock — next hit crits then buff clears)
+    if (attacker.activeBuff && attacker.activeBuff.type === 'crit') {
+      dmg = Math.round(dmg * attacker.activeBuff.value);
+      attacker.activeBuff = null; // consumes on hit
+      spawnPowerText('CRITICAL!', '#ff0000');
+    }
+    // Compound passive: every 4th hit bonus
+    if (attacker.activeBuff && attacker.activeBuff.type === 'compound') {
+      attacker.hitCount4 = (attacker.hitCount4 || 0) + 1;
+      if (attacker.hitCount4 >= attacker.activeBuff.value) {
+        dmg = Math.round(dmg * 1.5);
+        attacker.hitCount4 = 0;
+        spawnPowerText('COMPOUND!', '#00ff00');
+      }
+    }
+    // Matchup counter-pick bonus
+    if (attacker.data && this.data) {
+      const mu = getMatchupBonus(attacker.data.id, this.data.id);
+      if (mu && Math.random() < 0.35) {
+        if (mu.dmgMult) dmg = Math.round(dmg * mu.dmgMult);
+        if (mu.meterSteal) { const stolen = Math.min(this.superMeter, mu.meterSteal); this.superMeter -= stolen; attacker.superMeter = Math.min(100, attacker.superMeter + stolen); }
+        spawnPowerText(mu.msg, mu.color);
+      }
+    }
     if (move.steal) attacker.hp = Math.min(attacker.maxHp, attacker.hp + Math.round(dmg * move.steal));
     this.hp -= dmg;
+    // Super meter gain — more when low HP, combo bonus for attacker
+    this.superMeter = Math.min(100, this.superMeter + 6 + (this.hp < this.maxHp * 0.3 ? 4 : 0));
+    const comboBonus = (attacker === p1 && comboCount >= 2) ? Math.min(comboCount, 6) : 0;
+    attacker.superMeter = Math.min(100, attacker.superMeter + 4 + comboBonus);
     this.flashTimer = 12;
     this.hitstun = Math.min(18, Math.round(dmg * 0.7));
     this.state = 'hitstun'; this.stateTimer = this.hitstun;
@@ -1913,8 +2096,37 @@ class Fighter {
     if (dmg >= 20) slowMo = 6;
     if (this.hp <= 0) {
       this.hp = 0;
-      if (move === attacker.data.moves.finisher) {
+      const isPowerKill = attacker.currentPowerKey != null;
+      const isFinisher = move === attacker.data.moves.finisher;
+      const isUltKill = attacker.currentPowerKey === 'ultimate';
+      if (isFinisher || isUltKill) {
+        this.state = 'ko'; this.stateTimer = 140;
+        // FATALITY cinematic
+        slowMo = isUltKill ? 30 : 20;
+        screenShake = isUltKill ? 28 : 20;
+        screenFlash = isUltKill ? 12 : 8;
+        screenFlashColor = move.color || attacker.data.color;
+        // Explosion particles from victim
+        const cx = this.x, cy = this.y - this.h / 2;
+        for (let r = 0; r < 3; r++) setTimeout(() => spawnParticles(cx + (Math.random() - 0.5) * 40, cy + (Math.random() - 0.5) * 30, move.color || attacker.data.color, 20), r * 60);
+        // Fatality text
+        const fatalText = FATALITY_LINES[attacker.data.id];
+        if (fatalText) {
+          const line = fatalText[Math.floor(Math.random() * fatalText.length)];
+          spawnPowerText(line, move.color || attacker.data.color);
+        } else {
+          spawnPowerText(isUltKill ? 'OBLITERATED!' : 'FATALITY!', '#ff1493');
+        }
+        addCommentary('fatality', 5, '#ff1493');
+        playSound('ko', 0.5);
+      } else if (isPowerKill) {
+        // Power kill — less dramatic but still flashy
         this.state = 'ko'; this.stateTimer = 120;
+        slowMo = 14; screenShake = 16;
+        screenFlash = 6; screenFlashColor = move.color || attacker.data.color;
+        spawnParticles(this.x, this.y - this.h / 2, move.color || attacker.data.color, 16);
+        spawnPowerText(move.text || 'K.O.!', move.color || '#ff1493');
+        addCommentary('powerKO', 4, move.color || '#ff1493');
         playSound('ko', 0.5);
       } else {
         this.hp = 1;
@@ -1932,6 +2144,35 @@ class Fighter {
     if (this.specialCooldown > 0) this.specialCooldown--;
     if (this.invincible > 0) this.invincible--;
     if (this.flashTimer > 0) this.flashTimer--;
+    // Power cooldowns
+    for (const k in this.powerCooldowns) if (this.powerCooldowns[k] > 0) this.powerCooldowns[k]--;
+    // Active buff tick
+    if (this.activeBuff) {
+      this.activeBuff.timer--;
+      if (this.activeBuff.timer <= 0) {
+        // Flash Loan self-damage on expiry
+        if (this.activeBuff.type === 'flashloan') {
+          const selfDmg = Math.round(this.maxHp * 0.3);
+          this.hp = Math.max(1, this.hp - selfDmg);
+          spawnPowerText('LOAN DUE!', '#ff4444');
+          spawnParticles(this.x, this.y - this.h / 2, '#ff4444', 12);
+          screenShake = 8;
+        }
+        this.activeBuff = null;
+      }
+    }
+    // Counter stance tick
+    if (this.counterStance) { this.counterTimer--; if (this.counterTimer <= 0) { this.counterStance = false; } }
+    // DOT tick
+    if (this.activeDOT) {
+      this.activeDOT.timer--;
+      if (frameCount % 10 === 0) {
+        this.hp -= this.activeDOT.dmg;
+        spawnParticles(this.x, this.y - this.h / 2, this.activeDOT.color || '#ff4400', 3);
+        if (this.hp <= 0) { this.hp = 1; this.state = 'finishable'; this.stateTimer = 180; }
+      }
+      if (this.activeDOT.timer <= 0) this.activeDOT = null;
+    }
     if (this.shieldTimer > 0) { this.shieldTimer--; if (this.shieldTimer <= 0) this.shielded = false; }
     // Frame-based AI block timer
     if (this.blockTimer > 0) { this.blockTimer--; if (this.blockTimer <= 0) this.blocking = false; }
@@ -1981,7 +2222,77 @@ class Fighter {
           });
           playSound('projectile', 0.3);
         }
-        if (!move.projectile && !this.hitConnected) {
+        // Power type: AoE (on first active frame)
+        if (move.type === 'aoe' && this.moveFrame === move.startup + 1 && !this.hitConnected) {
+          const evoR = 1 + (this.evoLevel || 0) * 0.02; // EVO scales radius
+          const radius = (move.radius || 100) * evoR;
+          const dist = Math.abs(this.x - other.x);
+          const vert = Math.abs((this.y - this.h / 2) - (other.y - other.h / 2));
+          if (dist < radius && vert < 120) {
+            other.takeDamage(move.dmg, this, move);
+            if (move.stun) { other.state = 'hitstun'; other.stateTimer = move.stun; }
+          }
+          // EVO-scaled particles
+          const pCount = 20 + (this.evoLevel || 0) * 2;
+          spawnParticles(this.x, this.y - this.h / 2, move.color, pCount);
+          // EVO 5+: ring effect
+          if (this.evoLevel >= 5) {
+            for (let a = 0; a < 8; a++) {
+              const angle = (a / 8) * Math.PI * 2;
+              spawnTrail(this.x + Math.cos(angle) * radius * 0.6, this.y - this.h / 2 + Math.sin(angle) * 30, move.color);
+            }
+          }
+          // EVO 10+: screen flash
+          if (this.evoLevel >= 10) { screenFlash = 6; screenFlashColor = move.color; }
+          if (move.shakeScreen) screenShake = 14 + (this.evoLevel >= 10 ? 6 : 0);
+          this.hitConnected = true;
+          // Multi-text for Doge's Much Wow
+          if (move.texts && move.texts.length > 0) {
+            move.texts.forEach((t, i) => {
+              setTimeout(() => spawnPowerText(t, move.color), i * 120);
+            });
+          }
+        }
+        // Power type: grab (close range, unblockable)
+        if (move.type === 'grab' && this.moveFrame === move.startup + 1 && !this.hitConnected) {
+          const dist = Math.abs(this.x - other.x);
+          if (dist < (move.range || 60)) {
+            // Execute threshold check (Liquidator)
+            if (move.executeThreshold && other.hp / other.maxHp > move.executeThreshold) {
+              // Whiff — target too healthy
+              spawnPowerText('TOO HEALTHY!', '#666');
+            } else {
+              other.takeDamage(move.dmg, this, move);
+              if (move.launch) other.vy = -13;
+              if (move.steal) this.hp = Math.min(this.maxHp, this.hp + Math.round(move.dmg * move.steal));
+            }
+          }
+          this.hitConnected = true;
+        }
+        // Power type: meter_steal
+        if (move.type === 'meter_steal' && this.moveFrame === move.startup + 1 && !this.hitConnected) {
+          const dist = Math.abs(this.x - other.x);
+          if (dist < (move.range || 60)) {
+            const stolen = Math.min(other.superMeter, move.stealAmount || 30);
+            other.superMeter -= stolen;
+            this.superMeter = Math.min(100, this.superMeter + stolen);
+            other.takeDamage(move.dmg, this, move);
+            spawnParticles(other.x, other.y - other.h / 2, '#ffd700', 12);
+          }
+          this.hitConnected = true;
+        }
+        // Power type: dash_attack
+        if (move.type === 'dash_attack' && move.dash && this.moveFrame === move.startup + 1) {
+          this.vx = this.facing * (move.dash / move.active);
+          for (let t = 0; t < 3; t++) spawnTrail(this.x - this.facing * t * 10, this.y - this.h * 0.4, move.color || this.data.color);
+        }
+        // Power type: cinematic (ultimate) — similar to dash_attack + unblockable
+        if (move.type === 'cinematic' && this.moveFrame === move.startup + 1) {
+          if (move.teleport) { spawnParticles(this.x, this.y - this.h / 2, move.color, 12); this.x = other.x - this.facing * 50; spawnParticles(this.x, this.y - this.h / 2, move.color, 12); }
+          if (move.dash) { this.vx = this.facing * (move.dash / move.active); }
+        }
+        // Regular hit detection for non-projectile moves (includes dash_attack, cinematic, launch, reflect)
+        if (!move.projectile && !this.hitConnected && !['aoe','grab','meter_steal','buff','counter','heal','clone','summon','trap'].includes(move.type)) {
           const hitX = this.x + this.facing * (this.w / 2 + move.range / 2);
           const dist = Math.abs(hitX - other.x);
           if (dist < move.range / 2 + other.w / 2) {
@@ -2004,6 +2315,7 @@ class Fighter {
         if (this.moveFrame >= move.startup + move.active + move.recovery) {
           this.state = 'idle'; this.currentMove = null;
           this.attackArmExtend = 0; this.legExtend = 0;
+          this.currentPowerKey = null;
         }
       }
       if (move.dash) { this.x += this.vx; this.vx *= 0.92; }
@@ -2045,47 +2357,243 @@ class Fighter {
     return true;
   }
 
+  startPower(powerKey) {
+    if (['attack', 'hitstun', 'ko', 'finishable'].includes(this.state)) return false;
+    const power = this.data.powers?.[powerKey];
+    if (!power) return false;
+    if (powerKey === 'ultimate' && this.superMeter < 100) return false;
+    if (powerKey !== 'ultimate' && this.powerCooldowns[powerKey] > 0) return false;
+    // EVO damage scaling
+    const evoBonus = 1 + (this.evoLevel || 0) * 0.03;
+    this.state = 'attack';
+    this.currentMove = { ...power, dmg: Math.round((power.dmg || 0) * evoBonus) };
+    this.moveFrame = 0;
+    this.hitConnected = false; this.multihitCount = 0;
+    this.currentPowerKey = powerKey;
+    if (powerKey !== 'ultimate') this.powerCooldowns[powerKey] = power.cooldown;
+    if (powerKey === 'ultimate') {
+      this.superMeter = 0;
+      slowMo = 18; screenFlash = 8; screenFlashColor = this.data.color;
+      screenShake = 20;
+      playSound('ultimate', 0.6);
+      addCommentary('ultimateUsed', 4, this.data.color);
+    } else {
+      playSound('power', 0.4);
+      if (Math.random() < 0.3) addCommentary('powerUsed', 1, power.color || this.data.color);
+    }
+    if (power.text) spawnPowerText(power.text, power.color || this.data.color);
+    // Commentary for specific power types
+    if (power.type === 'counter') setTimeout(() => addCommentary('counterHit', 2, power.color), 200);
+    if (power.type === 'heal') addCommentary('healUsed', 1, '#00ff9d');
+    if (power.type === 'clone' || power.type === 'summon') addCommentary('cloneOut', 2, power.color);
+    if (power.type === 'trap') addCommentary('trapSet', 1, power.color);
+    if (power.type === 'grab') setTimeout(() => addCommentary('grabLand', 2, power.color), 150);
+    if (power.type === 'meter_steal') setTimeout(() => addCommentary('meterSteal', 2, '#ffd700'), 150);
+    // Type-specific init
+    if (power.type === 'buff') {
+      const bType = power.buffType || 'damage';
+      if (bType === 'stack') {
+        this.stackCount = Math.min((this.stackCount || 0) + 1, power.maxStacks || 5);
+        this.activeBuff = { type: bType, value: power.buffValue * this.stackCount, timer: power.active, color: power.color, stacks: this.stackCount };
+      } else {
+        this.activeBuff = { type: bType, value: power.buffValue, timer: power.active, color: power.color };
+      }
+      playSound('buff', 0.3);
+    }
+    if (power.type === 'counter') {
+      this.counterStance = true; this.counterTimer = power.active; this.counterMove = this.currentMove;
+    }
+    if (power.type === 'heal') {
+      this.hp = Math.min(this.maxHp, this.hp + (power.healAmount || 15));
+      spawnParticles(this.x, this.y - this.h / 2, '#00ff9d', 15);
+      playSound('heal', 0.35);
+    }
+    if (power.type === 'clone') {
+      clones.push({ x: this.x + this.facing * 40, y: GROUND_Y, w: this.w * 0.7, facing: this.facing, owner: this, dmg: power.dmg, color: power.color, timer: power.active, attackCd: 0 });
+    }
+    if (power.type === 'summon') {
+      const count = power.summonCount || 3;
+      for (let s = 0; s < count; s++) {
+        clones.push({ x: this.x + (s - count / 2) * 30, y: GROUND_Y, w: 16, facing: this.facing, owner: this, dmg: power.dmg, color: power.color, timer: power.active + s * 10, attackCd: s * 8 });
+      }
+    }
+    if (power.type === 'trap') {
+      const other = this === p1 ? p2 : p1;
+      traps.push({ x: other.x, dmg: power.dmg, color: power.color, owner: this, move: power, timer: power.active, trapDur: power.trapDur || 60, triggered: false });
+    }
+    if (power.shield) { this.shielded = true; this.shieldTimer = power.active; }
+    if (power.leaps && this.onGround) { this.vy = -8; this.y -= 1; }
+    return true;
+  }
+
   updateAI(other) {
     this.aiTimer++;
     if (this.aiTimer < this.aiReactTime) return;
     this.aiTimer = 0;
     const dist = Math.abs(this.x - other.x);
     const canAct = this.state === 'idle' || this.state === 'walk' || this.state === 'jump' || this.state === 'crouch';
-    const aggro = AI_AGGRO[difficulty];
+    const baseAggro = AI_AGGRO[difficulty];
+
+    // Evolution DNA modifiers — use fighter's own evo reference
+    const evo = this.evoRef;
+    const dna = evo ? evo.dna : { aggro: 0, defense: 0, speed: 0, combo: 0, spacing: 0 };
+    const rivalBonus = (enemyFighter && selectedFighter && isRival(this.data.id, other === p1 ? selectedFighter.id : enemyFighter.id)) ? 1.25 : 1;
+    const aggro = baseAggro + dna.aggro * 0.4 * rivalBonus;
+    const defBonus = dna.defense * 0.15 * rivalBonus;
+    const spdBonus = 1 + dna.speed * 0.15;
+
+    // Player pattern adaptation — counter their habits
+    const patternId = this.data.id; // Patterns keyed by this fighter's ID
+    const patterns = getPatternRates(patternId);
+    const adapted = patterns && patterns.matches >= 2;
+    // If player punches a lot, block more at close range
+    const counterBlock = adapted && patterns.punchRate > 0.35 ? 0.15 : 0;
+    // If player jumps a lot, use anti-air (special at mid range)
+    const antiAir = adapted && patterns.jumpRate > 0.2 && !other.onGround ? 0.2 : 0;
+    // If player blocks a lot, approach more aggressively
+    const pressureBoost = adapted && patterns.blockRate > 0.25 ? 0.15 : 0;
 
     if (other.state === 'finishable' && dist < 100 && canAct) {
       this.finisherReady = true; this.startMove('finisher'); return;
     }
     const proj = projectiles.find(p => p.owner !== this && Math.abs(p.x - this.x) < 150);
-    if (proj && Math.random() < 0.4 + difficulty * 0.15) {
+    if (proj && Math.random() < 0.4 + difficulty * 0.15 + defBonus) {
       this.blocking = true; this.blockTimer = 24; return;
+    }
+
+    // Anti-air: if player is airborne and AI has adapted
+    if (antiAir > 0 && !other.onGround && dist < 200 && canAct && this.specialCooldown <= 0) {
+      if (Math.random() < antiAir) { this.startMove('special'); return; }
+    }
+
+    // AI Power usage — based on EVO level, situation, and available powers
+    const evoSkill = Math.min(1, (this.evoLevel || 0) / 12);
+    if (canAct && this.data.powers && Math.random() < 0.12 + evoSkill * 0.15) {
+      const pw = this.data.powers;
+      // Ultimate when meter full and close
+      if (this.superMeter >= 100 && dist < 100 && Math.random() < 0.35 + evoSkill * 0.3) {
+        if (this.startPower('ultimate')) return;
+      }
+      // Counter when opponent attacking nearby
+      if (other.state === 'attack' && dist < 120) {
+        for (const k of ['power1','power2','power3']) {
+          if (pw[k]?.type === 'counter' && this.powerCooldowns[k] <= 0 && Math.random() < 0.25 * evoSkill) {
+            if (this.startPower(k)) return;
+          }
+        }
+      }
+      // Grab when close and opponent blocking
+      if (dist < 70 && other.blocking) {
+        for (const k of ['power1','power2','power3']) {
+          if (pw[k]?.type === 'grab' && this.powerCooldowns[k] <= 0) { if (this.startPower(k)) return; }
+        }
+      }
+      // Projectile at range
+      if (dist > 180) {
+        for (const k of ['power1','power2','power3']) {
+          if ((pw[k]?.type === 'projectile' || pw[k]?.projectile) && this.powerCooldowns[k] <= 0) { if (this.startPower(k)) return; }
+        }
+      }
+      // Buff when safe
+      if (dist > 150 && !this.activeBuff) {
+        for (const k of ['power1','power2','power3']) {
+          if (pw[k]?.type === 'buff' && this.powerCooldowns[k] <= 0 && Math.random() < 0.15) { if (this.startPower(k)) return; }
+        }
+      }
+      // Heal when low
+      if (this.hp < this.maxHp * 0.35) {
+        for (const k of ['power1','power2','power3']) {
+          if (pw[k]?.type === 'heal' && this.powerCooldowns[k] <= 0) { if (this.startPower(k)) return; }
+        }
+      }
+      // AoE/dash_attack when close
+      if (dist < 120) {
+        for (const k of ['power1','power2','power3']) {
+          if ((pw[k]?.type === 'aoe' || pw[k]?.type === 'dash_attack') && this.powerCooldowns[k] <= 0 && Math.random() < 0.2 * aggro) {
+            if (this.startPower(k)) return;
+          }
+        }
+      }
     }
 
     if (dist < 100 && canAct) {
       const r = Math.random();
-      if (r < 0.25 * aggro) this.startMove('punch');
+      const comboChain = dna.combo > 0.3 && other.state === 'hitstun' ? 0.3 : 0;
+      if (r < (0.25 + comboChain) * aggro) this.startMove('punch');
       else if (r < 0.45 * aggro) this.startMove('kick');
-      else if (r < 0.6 * aggro && this.specialCooldown <= 0) this.startMove('special');
-      else if (r < 0.75) { this.blocking = true; this.blockTimer = 20 + Math.random() * 10; }
+      else if (r < (0.6 + pressureBoost) * aggro && this.specialCooldown <= 0) this.startMove('special');
+      else if (r < 0.75 + counterBlock + defBonus) { this.blocking = true; this.blockTimer = 20 + Math.random() * 10; }
       else this.x -= this.facing * 35;
-    } else if (dist < 250 && canAct) {
-      if (Math.random() < 0.25 * aggro && this.specialCooldown <= 0) this.startMove('special');
-      else this.x += this.facing * this.data.spd;
+    } else if (dist < (250 + dna.spacing * 50) && canAct) {
+      if (Math.random() < (0.25 + pressureBoost) * aggro && this.specialCooldown <= 0) this.startMove('special');
+      else this.x += this.facing * this.data.spd * spdBonus;
     } else {
-      this.x += this.facing * this.data.spd;
+      this.x += this.facing * this.data.spd * spdBonus;
       if (Math.random() < 0.03 + difficulty * 0.015 && this.onGround) { this.vy = -10; this.y -= 1; this.state = 'jump'; }
     }
   }
 
   draw() {
-    // Ground shadow
+    // Invis buff — reduce opacity
+    const isInvis = this.activeBuff && this.activeBuff.type === 'invis';
+    if (isInvis) { ctx.save(); ctx.globalAlpha = 1 - this.activeBuff.value; }
+    // DOT visual — fire tint
+    if (this.activeDOT && frameCount % 6 < 3) {
+      ctx.save(); ctx.shadowColor = this.activeDOT.color || '#ff4400'; ctx.shadowBlur = 10;
+    }
+    // Ground shadow — evo fighters get colored shadows
     if (this.state !== 'ko') {
-      const shadowScale = 1 - (GROUND_Y - this.y) / 200; // smaller shadow when airborne
+      const shadowScale = 1 - (GROUND_Y - this.y) / 200;
       const sw = this.w * 0.8 * Math.max(0.3, shadowScale);
-      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      const evoColor = this.evoLevel >= 5 ? (EVO_PERSONALITIES[this.evoRef?.personality]?.color || this.data.color) : null;
+      ctx.fillStyle = evoColor && this.evoLevel >= 10 ? evoColor + '20' : 'rgba(0,0,0,0.25)';
       ctx.beginPath();
-      ctx.ellipse(this.x, GROUND_Y + 2, sw, 5 * Math.max(0.3, shadowScale), 0, 0, Math.PI * 2);
+      ctx.ellipse(this.x, GROUND_Y + 2, sw + (this.evoLevel >= 10 ? 8 : 0), 5 * Math.max(0.3, shadowScale), 0, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    // EVO AURA — drawn behind fighter
+    if (this.evoLevel > 0 && this.state !== 'ko') {
+      const pers = EVO_PERSONALITIES[this.evoRef?.personality] || EVO_PERSONALITIES.balanced;
+      const cx = this.x, cy = this.y - this.h / 2;
+      const pulse = Math.sin(frameCount * 0.06) * 0.3 + 0.7;
+
+      if (this.evoLevel >= 10) {
+        // TIER 3: Intense radial aura + particle trail + outer ring
+        ctx.save();
+        const grad = ctx.createRadialGradient(cx, cy, 5, cx, cy, 50 + pulse * 15);
+        grad.addColorStop(0, pers.color + '30');
+        grad.addColorStop(0.5, pers.color + '15');
+        grad.addColorStop(1, pers.color + '00');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.ellipse(cx, cy, 50 + pulse * 15, 60 + pulse * 10, 0, 0, Math.PI * 2); ctx.fill();
+        // Outer ring
+        ctx.strokeStyle = pers.color + '40'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.ellipse(cx, cy, 55 + pulse * 12, 65 + pulse * 8, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+        // Spawn evo trail particles
+        if (frameCount % 3 === 0) {
+          spawnTrail(cx + (Math.random() - 0.5) * 20, cy + (Math.random() - 0.5) * this.h, pers.color);
+        }
+      } else if (this.evoLevel >= 5) {
+        // TIER 2: Pulsing aura ellipse
+        ctx.save();
+        const grad = ctx.createRadialGradient(cx, cy, 3, cx, cy, 35 + pulse * 10);
+        grad.addColorStop(0, pers.color + '20');
+        grad.addColorStop(1, pers.color + '00');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.ellipse(cx, cy, 35 + pulse * 10, 45 + pulse * 8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      } else {
+        // TIER 1: Subtle glow behind fighter
+        ctx.save();
+        ctx.shadowColor = pers.color; ctx.shadowBlur = 8 + pulse * 6;
+        ctx.globalAlpha = 0.15 + pulse * 0.1;
+        ctx.fillStyle = pers.color;
+        ctx.beginPath(); ctx.ellipse(cx, cy, 20, 30, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+        ctx.restore();
+      }
     }
 
     ctx.save();
@@ -2116,17 +2624,55 @@ class Fighter {
     if (this.state === 'ko') ctx.restore();
     ctx.restore();
 
-    // Nameplate with subtle background
+    // Active buff visual indicator
+    if (this.activeBuff && this.state !== 'ko') {
+      const pulse = 0.4 + Math.sin(frameCount * 0.1) * 0.2;
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = this.activeBuff.color || '#ffcc00';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y - this.h / 2, this.w * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+      // Buff type label
+      ctx.font = 'bold 7px Arial'; ctx.textAlign = 'center';
+      ctx.fillStyle = this.activeBuff.color || '#ffcc00';
+      const bLabel = this.activeBuff.stacks ? `x${this.activeBuff.stacks}` : '';
+      if (bLabel) ctx.fillText(bLabel, this.x, this.y - this.h - 8);
+      ctx.restore();
+    }
+    // Counter stance visual
+    if (this.counterStance && this.state !== 'ko') {
+      const pulse = 0.5 + Math.sin(frameCount * 0.15) * 0.3;
+      ctx.save(); ctx.globalAlpha = pulse;
+      ctx.strokeStyle = '#ff1493'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.arc(this.x, this.y - this.h / 2, this.w * 0.6, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = 'bold 8px Arial'; ctx.fillStyle = '#ff1493'; ctx.textAlign = 'center';
+      ctx.fillText('COUNTER', this.x, this.y - this.h - 6);
+      ctx.restore();
+    }
+    // Nameplate + EVO badge
     if (this.state !== 'ko') {
       const name = this.data.name;
       ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center';
-      const nw = ctx.measureText(name).width + 8;
+      const evoTag = this.evoLevel > 0 ? ` EVO${this.evoLevel}` : '';
+      const fullName = name + evoTag;
+      const nw = ctx.measureText(fullName).width + 10;
       ctx.fillStyle = 'rgba(0,0,0,0.35)';
       ctx.beginPath(); ctx.roundRect(this.x - nw / 2, this.y + 4, nw, 13, 3); ctx.fill();
       ctx.fillStyle = this.data.color; ctx.globalAlpha = 0.85;
-      ctx.fillText(name, this.x, this.y + 14);
+      ctx.fillText(name, this.x - (evoTag ? ctx.measureText(evoTag).width / 2 : 0), this.y + 14);
+      if (this.evoLevel > 0) {
+        const pers = EVO_PERSONALITIES[this.evoRef?.personality] || EVO_PERSONALITIES.balanced;
+        ctx.fillStyle = pers.color; ctx.font = 'bold 7px Arial';
+        ctx.fillText(evoTag.trim(), this.x + ctx.measureText(name).width / 2 + 2 + ctx.measureText(evoTag.trim()).width / 2, this.y + 14);
+      }
       ctx.globalAlpha = 1;
     }
+    // Close DOT/invis ctx.save()
+    if (this.activeDOT && frameCount % 6 < 3) ctx.restore();
+    if (isInvis) ctx.restore();
   }
 }
 
@@ -2179,13 +2725,94 @@ function drawParticles() {
 function updateProjectiles() {
   for (let i = projectiles.length-1; i >= 0; i--) {
     const p = projectiles[i]; p.x += p.vx; p.life--;
+    // Boomerang: reverse direction at halfway
+    if (p.move?.boomerang && !p.reversed && p.life < 40) {
+      p.vx = -p.vx; p.reversed = true;
+      p.owner = p.origOwner || p.owner; // can hit again after return
+    }
     const target = p.owner === p1 ? p2 : p1;
     if (Math.abs(p.x - target.x) < p.w + target.w / 2 && Math.abs(p.y - (target.y - target.h / 2)) < p.h + target.h / 2) {
+      // Reflect check: if target has an active 'reflect' power
+      if (target.currentPowerKey && target.data.powers?.[target.currentPowerKey]?.type === 'reflect' && !p.reflected) {
+        p.vx = -p.vx; p.owner = target; p.reflected = true; p.life = 40;
+        spawnPowerText('REFLECTED!', target.data.color);
+        spawnParticles(p.x, p.y, target.data.color, 10);
+        playSound('counter', 0.4);
+        addCommentary('reflect', 3, target.data.color);
+        continue;
+      }
       target.takeDamage(p.dmg, p.owner, p.move);
+      // DOT application
+      if (p.move?.dot && p.move.dotDmg && p.move.dotDur) {
+        target.activeDOT = { dmg: p.move.dotDmg, timer: p.move.dotDur, color: p.color };
+      }
       spawnParticles(p.x, p.y, p.color, 8); projectiles.splice(i, 1); continue;
     }
     if (p.life <= 0 || p.x < -50 || p.x > W + 50) projectiles.splice(i, 1);
   }
+}
+// Trap and Clone/Summon systems
+let traps = [], clones = [];
+function updateTraps() {
+  for (let i = traps.length - 1; i >= 0; i--) {
+    const t = traps[i]; t.timer--;
+    const target = t.owner === p1 ? p2 : p1;
+    if (Math.abs(t.x - target.x) < 40 && target.onGround && !t.triggered) {
+      t.triggered = true;
+      target.state = 'hitstun'; target.stateTimer = t.trapDur || 60;
+      target.takeDamage(t.dmg, t.owner, t.move);
+      spawnPowerText(t.move.text || 'TRAPPED!', t.color);
+      spawnParticles(t.x, GROUND_Y - 10, t.color, 15);
+      screenShake = 8; playSound('hit', 0.4);
+    }
+    if (t.timer <= 0 || t.triggered) traps.splice(i, 1);
+  }
+  if (traps.length > 4) traps.splice(0, traps.length - 4);
+}
+function drawTraps() {
+  traps.forEach(t => {
+    if (t.triggered) return;
+    const pulse = 0.3 + Math.sin(frameCount * 0.1) * 0.15;
+    ctx.save(); ctx.globalAlpha = pulse;
+    ctx.fillStyle = t.color; ctx.strokeStyle = t.color;
+    ctx.beginPath(); ctx.arc(t.x, GROUND_Y, 12, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(t.x, GROUND_Y, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  });
+}
+function updateClones() {
+  for (let i = clones.length - 1; i >= 0; i--) {
+    const c = clones[i]; c.timer--;
+    const target = c.owner === p1 ? p2 : p1;
+    c.x += c.facing * 2; // Walk toward target
+    c.facing = target.x > c.x ? 1 : -1;
+    const dist = Math.abs(c.x - target.x);
+    if (dist < 50 && c.attackCd <= 0) {
+      target.takeDamage(c.dmg, c.owner, { color: c.color, dmg: c.dmg });
+      spawnParticles(c.x, c.y - 20, c.color, 6);
+      c.attackCd = 30;
+    }
+    if (c.attackCd > 0) c.attackCd--;
+    c.x = Math.max(STAGE_LEFT + 20, Math.min(STAGE_RIGHT - 20, c.x));
+    if (c.timer <= 0) clones.splice(i, 1);
+  }
+  if (clones.length > 6) clones.splice(0, clones.length - 6);
+}
+function drawClones() {
+  clones.forEach(c => {
+    const alpha = Math.min(1, c.timer / 15) * 0.6;
+    ctx.save(); ctx.globalAlpha = alpha;
+    // Simple silhouette
+    ctx.fillStyle = c.color;
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y - 15, c.w / 2, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Head
+    ctx.beginPath();
+    ctx.arc(c.x, c.y - 38, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
 }
 function drawProjectiles() {
   projectiles.forEach(p => {
@@ -2510,6 +3137,14 @@ function drawHUD() {
   // Name + HP text
   ctx.font = `bold ${isMob ? 11 : 13}px Arial`; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
   ctx.fillText(p1.data.name.toUpperCase(), pad, barY - 3);
+  // X handle for P1 in online challenge
+  if (gameMode === 'online' && myXHandle && onlineSlot === 0) {
+    ctx.font = `${isMob ? 7 : 9}px Arial`; ctx.fillStyle = '#1da1f2';
+    ctx.fillText('@' + myXHandle, pad + ctx.measureText(p1.data.name.toUpperCase()).width + 6, barY - 3);
+  } else if (gameMode === 'online' && challengeFrom && onlineSlot === 1) {
+    ctx.font = `${isMob ? 7 : 9}px Arial`; ctx.fillStyle = '#1da1f2';
+    ctx.fillText('@' + challengeFrom, pad + ctx.measureText(p1.data.name.toUpperCase()).width + 6, barY - 3);
+  }
   ctx.font = `${isMob ? 8 : 10}px Arial`; ctx.fillStyle = '#666';
   ctx.fillText(Math.max(0, Math.round(p1.hp)) + '/' + p1.maxHp, pad + barW - (isMob ? 34 : 42), barY + bH + 11);
 
@@ -2532,6 +3167,14 @@ function drawHUD() {
   if (p2Pct < 0.25 && p2Pct > 0) { ctx.shadowColor = '#ff4444'; ctx.shadowBlur = 8; ctx.fillRect(p2X + barW * (1 - p2Pct), barY, barW * p2Pct, 1); ctx.shadowBlur = 0; }
   ctx.font = `bold ${isMob ? 11 : 13}px Arial`; ctx.fillStyle = '#fff'; ctx.textAlign = 'right';
   ctx.fillText(p2.data.name.toUpperCase(), W - pad, barY - 3);
+  // X handle for P2 in online challenge
+  if (gameMode === 'online' && challengeFrom && onlineSlot === 0) {
+    ctx.font = `${isMob ? 7 : 9}px Arial`; ctx.fillStyle = '#1da1f2'; ctx.textAlign = 'right';
+    ctx.fillText('@' + challengeFrom, W - pad - ctx.measureText(p2.data.name.toUpperCase()).width - 6, barY - 3);
+  } else if (gameMode === 'online' && myXHandle && onlineSlot === 1) {
+    ctx.font = `${isMob ? 7 : 9}px Arial`; ctx.fillStyle = '#1da1f2'; ctx.textAlign = 'right';
+    ctx.fillText('@' + myXHandle, W - pad - ctx.measureText(p2.data.name.toUpperCase()).width - 6, barY - 3);
+  }
   ctx.font = `${isMob ? 8 : 10}px Arial`; ctx.fillStyle = '#666'; ctx.textAlign = 'left';
   ctx.fillText(Math.max(0, Math.round(p2.hp)) + '/' + p2.maxHp, p2X + 3, barY + bH + 11);
 
@@ -2568,20 +3211,60 @@ function drawHUD() {
     if (won) { ctx.shadowColor = '#ff6b6b'; ctx.shadowBlur = 6; ctx.fill(); ctx.shadowBlur = 0; }
   }
 
-  // Special cooldown bar — under P1 HP
+  // Super meter bar — P1 (under HP bar)
+  const meterW = isMob ? 60 : 80, meterH = 5, meterY = barY + bH + 14;
+  ctx.fillStyle = '#1a1a2e'; ctx.beginPath(); ctx.roundRect(pad, meterY, meterW, meterH, 2); ctx.fill();
+  const mPct1 = Math.min(1, p1.superMeter / 100);
+  if (mPct1 > 0) {
+    const mGrad = ctx.createLinearGradient(pad, 0, pad + meterW, 0);
+    mGrad.addColorStop(0, '#9d00ff'); mGrad.addColorStop(1, '#ff1493');
+    ctx.fillStyle = mGrad; ctx.beginPath(); ctx.roundRect(pad, meterY, meterW * mPct1, meterH, 2); ctx.fill();
+  }
+  if (p1.superMeter >= 100) {
+    ctx.shadowColor = '#ff1493'; ctx.shadowBlur = 6 + Math.sin(frameCount * 0.12) * 4;
+    ctx.fillRect(pad, meterY, meterW, meterH); ctx.shadowBlur = 0;
+    ctx.font = `bold ${isMob ? 6 : 7}px Arial`; ctx.fillStyle = '#ff1493'; ctx.textAlign = 'left';
+    const pulse = 0.6 + Math.sin(frameCount * 0.1) * 0.4; ctx.globalAlpha = pulse;
+    ctx.fillText('ULTIMATE', pad, meterY + meterH + 8); ctx.globalAlpha = 1;
+  }
+  // Super meter bar — P2
+  const p2MeterX = W - pad - meterW;
+  ctx.fillStyle = '#1a1a2e'; ctx.beginPath(); ctx.roundRect(p2MeterX, meterY, meterW, meterH, 2); ctx.fill();
+  const mPct2 = Math.min(1, p2.superMeter / 100);
+  if (mPct2 > 0) {
+    const mGrad2 = ctx.createLinearGradient(p2MeterX, 0, p2MeterX + meterW, 0);
+    mGrad2.addColorStop(0, '#ff1493'); mGrad2.addColorStop(1, '#9d00ff');
+    ctx.fillStyle = mGrad2; ctx.beginPath(); ctx.roundRect(p2MeterX + meterW * (1 - mPct2), meterY, meterW * mPct2, meterH, 2); ctx.fill();
+  }
+  if (p2.superMeter >= 100) {
+    ctx.shadowColor = '#ff1493'; ctx.shadowBlur = 6 + Math.sin(frameCount * 0.12) * 4;
+    ctx.fillRect(p2MeterX, meterY, meterW, meterH); ctx.shadowBlur = 0;
+    ctx.font = `bold ${isMob ? 6 : 7}px Arial`; ctx.fillStyle = '#ff1493'; ctx.textAlign = 'right';
+    const pulse = 0.6 + Math.sin(frameCount * 0.1) * 0.4; ctx.globalAlpha = pulse;
+    ctx.fillText('ULTIMATE', W - pad, meterY + meterH + 8); ctx.globalAlpha = 1;
+  }
+  // Power cooldown pips — P1
+  if (p1.data.powers) {
+    const pipY = meterY + meterH + (p1.superMeter >= 100 ? 12 : 3);
+    ['power1','power2','power3'].forEach((pk, i) => {
+      const power = p1.data.powers[pk]; if (!power) return;
+      const cd = p1.powerCooldowns[pk]; const maxCd = power.cooldown;
+      const pipX = pad + i * 24, pipW = 20, pipH = 3;
+      ctx.fillStyle = '#1a1a2e'; ctx.beginPath(); ctx.roundRect(pipX, pipY, pipW, pipH, 1); ctx.fill();
+      if (cd > 0) {
+        ctx.fillStyle = '#333'; ctx.beginPath(); ctx.roundRect(pipX, pipY, pipW * (1 - cd / maxCd), pipH, 1); ctx.fill();
+      } else {
+        ctx.fillStyle = power.color; ctx.beginPath(); ctx.roundRect(pipX, pipY, pipW, pipH, 1); ctx.fill();
+      }
+    });
+    // Labels
+    ctx.font = `${isMob ? 5 : 6}px Arial`; ctx.fillStyle = '#444'; ctx.textAlign = 'left';
+    ctx.fillText('S+SP  F+SP  B+SP', pad, pipY + pipH + 7);
+  }
+  // Special cooldown — simplified
   if (p1.specialCooldown > 0) {
-    const cdPct = 1 - p1.specialCooldown / 120;
-    ctx.fillStyle = '#1a1a2e'; ctx.beginPath(); ctx.roundRect(pad, barY + bH + 16, 70, 4, 2); ctx.fill();
-    const cdGrad = ctx.createLinearGradient(pad, 0, pad + 70, 0);
-    cdGrad.addColorStop(0, '#9d00ff'); cdGrad.addColorStop(1, '#ff1493');
-    ctx.fillStyle = cdGrad; ctx.beginPath(); ctx.roundRect(pad, barY + bH + 16, 70 * cdPct, 4, 2); ctx.fill();
-    ctx.font = `${isMob ? 7 : 8}px Arial`; ctx.fillStyle = '#555'; ctx.textAlign = 'left'; ctx.fillText('SPECIAL', pad, barY + bH + 28);
-  } else {
-    ctx.font = `bold ${isMob ? 7 : 8}px Arial`; ctx.fillStyle = '#9d00ff'; ctx.textAlign = 'left';
-    const pulse = 0.6 + Math.sin(frameCount * 0.08) * 0.4;
-    ctx.globalAlpha = pulse;
-    ctx.fillText(isMob ? 'SP READY' : 'SPECIAL READY', pad, barY + bH + 28);
-    ctx.globalAlpha = 1;
+    ctx.font = `${isMob ? 7 : 8}px Arial`; ctx.fillStyle = '#555'; ctx.textAlign = 'left';
+    ctx.fillText('SP: ' + Math.ceil(p1.specialCooldown / 60) + 's', pad + (isMob ? 0 : 75), meterY);
   }
 
   // Combo counter — big, dynamic, with streak glow
@@ -2663,6 +3346,50 @@ function drawHUD() {
     ctx.fillText(tauntText, tx, ty + 6);
     ctx.globalAlpha = 1;
     tauntTimer--;
+  }
+
+  // AI Commentary — floating text top center
+  if (commentary.timer > 0 && commentary.text && gameState === STATE.FIGHT) {
+    const cAlpha = Math.min(1, commentary.timer / 25);
+    ctx.globalAlpha = cAlpha;
+    ctx.font = `bold ${isMob ? 12 : 15}px Arial`;
+    ctx.textAlign = 'center';
+    const cy = isMob ? 42 : 52;
+    // Glow
+    ctx.shadowColor = commentary.color; ctx.shadowBlur = 12;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    const cw = ctx.measureText(commentary.text).width + 20;
+    ctx.beginPath(); ctx.roundRect(W / 2 - cw / 2, cy - 12, cw, isMob ? 20 : 24, 8); ctx.fill();
+    ctx.fillStyle = commentary.color;
+    ctx.fillText(commentary.text, W / 2, cy + (isMob ? 4 : 6));
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  }
+
+  // AI Win Probability meter — thin bar under HP bars
+  if (gameState === STATE.FIGHT && p1 && p2) {
+    const barY = isMob ? 22 : 28;
+    const barW = W * 0.5;
+    const barX = (W - barW) / 2;
+    const barH = 4;
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.roundRect(barX, barY, barW, barH, 2); ctx.fill();
+    // P1 side (green)
+    const p1W = barW * winProb;
+    ctx.fillStyle = '#00ff9d66'; ctx.fillRect(barX, barY, p1W, barH);
+    // P2 side (red)
+    ctx.fillStyle = '#ff6b6b66'; ctx.fillRect(barX + p1W, barY, barW - p1W, barH);
+    // Center pip
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(barX + p1W - 1, barY - 1, 2, barH + 2);
+    // Labels
+    ctx.font = '8px Arial'; ctx.globalAlpha = 0.5;
+    ctx.textAlign = 'left'; ctx.fillStyle = '#00ff9d';
+    ctx.fillText(`${Math.round(winProb * 100)}%`, barX, barY - 2);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#ff6b6b';
+    ctx.fillText(`${Math.round((1 - winProb) * 100)}%`, barX + barW, barY - 2);
+    ctx.globalAlpha = 1;
   }
 
   // Training mode frame data
@@ -2754,13 +3481,14 @@ function setMode(m) {
   gameMode = m;
   selectedFighter = null; p2SelectedFighter = null; enemyFighter = null;
   onlineOpponentReady = false; remoteKeys = {};
+  arenaFighter1 = null; arenaFighter2 = null; arenaPrediction = null;
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
-  document.getElementById('diff-row').style.display = (m === '2p' || m === 'training' || m === 'online') ? 'none' : 'flex';
+  document.getElementById('diff-row').style.display = (m === '2p' || m === 'training' || m === 'online' || m === 'arena') ? 'none' : 'flex';
   document.getElementById('p2-hint').style.display = m === '2p' ? 'block' : 'none';
   const btn = document.getElementById('fight-btn');
-  btn.disabled = true; btn.textContent = 'SELECT A FIGHTER';
+  btn.disabled = true; btn.textContent = m === 'arena' ? 'PICK 2 FIGHTERS' : 'SELECT A FIGHTER';
   document.getElementById('fighter-preview').innerHTML = '';
-  document.getElementById('moves-preview').innerHTML = '';
+  document.getElementById('moves-preview').innerHTML = m === 'arena' ? '<div style="color:#9d00ff;text-align:center;font-size:0.8em">Pick two evolved fighters to watch them battle autonomously.<br>Predict the winner to earn Arena Points! (You have ' + arenaPoints + ' pts)</div>' : '';
   // Show online overlay
   if (m === 'online') {
     document.getElementById('online-overlay').classList.add('show');
@@ -2774,9 +3502,46 @@ let gameState = STATE.SELECT, selectedFighter = null, enemyFighter = null;
 let p1, p2, screenShake = 0, slowMo = 0;
 let announceText = '', announceTimer = 0, announceColor = '#ff1493';
 let roundNum = 1, p1Rounds = 0, p2Rounds = 0;
+// AI Arena state
+let arenaFighter1 = null, arenaFighter2 = null;
+let arenaPrediction = null; // 'p1' or 'p2'
+let arenaPoints = parseInt(localStorage.getItem('clash_arena_pts') || '100');
+function saveArenaPoints() { localStorage.setItem('clash_arena_pts', arenaPoints); }
 let comboCount = 0, comboTimer = 0, lastHitTime = 0, frameCount = 0;
 let matchTimer = 99, matchTimerAccum = 0;
 let paused = false;
+
+// ====================== POWER TEXT OVERLAYS ======================
+let powerTexts = [];
+function spawnPowerText(text, color) {
+  powerTexts.push({ text, color, x: W / 2, y: H / 2 - 60, timer: 55, maxTimer: 55, scale: 0.2 });
+}
+function updatePowerTexts() {
+  for (let i = powerTexts.length - 1; i >= 0; i--) {
+    const pt = powerTexts[i];
+    pt.timer--;
+    if (pt.scale < 1) pt.scale = Math.min(1, pt.scale + 0.12);
+    pt.y -= 0.3; // float up slightly
+    if (pt.timer <= 0) powerTexts.splice(i, 1);
+  }
+  if (powerTexts.length > 3) powerTexts.splice(0, powerTexts.length - 3);
+}
+function drawPowerTexts() {
+  powerTexts.forEach(pt => {
+    const fadeOut = Math.min(1, pt.timer / 12);
+    const fontSize = Math.round(44 * pt.scale);
+    ctx.font = `900 ${fontSize}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = fadeOut;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 4; ctx.lineJoin = 'round';
+    ctx.strokeText(pt.text, pt.x, pt.y);
+    ctx.shadowColor = pt.color; ctx.shadowBlur = 25;
+    ctx.fillStyle = pt.color;
+    ctx.fillText(pt.text, pt.x, pt.y);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  });
+}
 
 const keys = {};
 document.addEventListener('keydown', e => {
@@ -2829,24 +3594,38 @@ function quitToSelect() {
 }
 
 function handleInput() {
+  // Arena mode: both players are AI, no human input
+  if (gameMode === 'arena') return;
   // P1 always uses WASD + JKL
   if (p1.state !== 'ko' && p1.state !== 'finishable') {
     const canMove = ['idle','walk','jump'].includes(p1.state);
     const canAct = canMove || p1.state === 'crouch';
     p1.blocking = keys[' '] && canMove;
+    if (p1.blocking && enemyFighter && frameCount % 10 === 0) recordPattern(enemyFighter.id, 'block');
     if (canMove && !p1.blocking) {
       if (keys['a']) { p1.x -= p1.data.spd; if (p1.onGround) p1.state = 'walk'; }
       else if (keys['d']) { p1.x += p1.data.spd; if (p1.onGround) p1.state = 'walk'; }
       else if (p1.onGround && p1.state === 'walk') p1.state = 'idle';
-      if (keys['w'] && p1.onGround) { p1.vy = -11; p1.y -= 1; p1.state = 'jump'; }
+      if (keys['w'] && p1.onGround) { p1.vy = -11; p1.y -= 1; p1.state = 'jump'; if (enemyFighter) recordPattern(enemyFighter.id, 'jump'); }
     }
     if (keys['s'] && p1.onGround && canMove) p1.state = 'crouch';
     else if (p1.state === 'crouch' && !keys['s']) p1.state = 'idle';
     if (canAct) {
-      if (keys['j'] && keys['k'] && p2.state === 'finishable') { p1.finisherReady = true; p1.startMove('finisher'); }
-      else if (keys['j']) p1.startMove('punch');
-      else if (keys['k']) p1.startMove('kick');
-      else if (keys['l']) p1.startMove('special');
+      if (keys['j'] && keys['k'] && keys['l']) {
+        // J+K+L = Ultimate
+        p1.startPower('ultimate');
+      } else if (keys['j'] && keys['k'] && p2.state === 'finishable') { p1.finisherReady = true; p1.startMove('finisher'); }
+      else if (keys['l']) {
+        // Directional power detection
+        const fwd = p1.facing === 1 ? 'd' : 'a';
+        const back = p1.facing === 1 ? 'a' : 'd';
+        if (keys['s']) { p1.startPower('power1') || p1.startMove('special'); }
+        else if (keys[fwd]) { p1.startPower('power2') || p1.startMove('special'); }
+        else if (keys[back]) { p1.startPower('power3') || p1.startMove('special'); }
+        else { p1.startMove('special'); if (enemyFighter) recordPattern(enemyFighter.id, 'special'); }
+      }
+      else if (keys['j']) { p1.startMove('punch'); if (enemyFighter) recordPattern(enemyFighter.id, 'punch'); }
+      else if (keys['k']) { p1.startMove('kick'); if (enemyFighter) recordPattern(enemyFighter.id, 'kick'); }
     }
   }
   // P2 uses arrows + numpad (only in local 2P mode)
@@ -2863,10 +3642,18 @@ function handleInput() {
     if (keys['arrowdown'] && p2.onGround && canMove) p2.state = 'crouch';
     else if (p2.state === 'crouch' && !keys['arrowdown']) p2.state = 'idle';
     if (canAct) {
-      if (keys['1'] && keys['2'] && p1.state === 'finishable') { p2.finisherReady = true; p2.startMove('finisher'); }
+      if (keys['1'] && keys['2'] && keys['3']) { p2.startPower('ultimate'); }
+      else if (keys['1'] && keys['2'] && p1.state === 'finishable') { p2.finisherReady = true; p2.startMove('finisher'); }
+      else if (keys['3']) {
+        const fwd = p2.facing === 1 ? 'arrowright' : 'arrowleft';
+        const back = p2.facing === 1 ? 'arrowleft' : 'arrowright';
+        if (keys['arrowdown']) { p2.startPower('power1') || p2.startMove('special'); }
+        else if (keys[fwd]) { p2.startPower('power2') || p2.startMove('special'); }
+        else if (keys[back]) { p2.startPower('power3') || p2.startMove('special'); }
+        else p2.startMove('special');
+      }
       else if (keys['1']) p2.startMove('punch');
       else if (keys['2']) p2.startMove('kick');
-      else if (keys['3']) p2.startMove('special');
     }
   }
   // Online 2P: apply remote inputs to P2
@@ -2884,10 +3671,18 @@ function handleInput() {
     if (rk['s'] && p2.onGround && canMove) p2.state = 'crouch';
     else if (p2.state === 'crouch' && !rk['s']) p2.state = 'idle';
     if (canAct) {
-      if (rk['j'] && rk['k'] && p1.state === 'finishable') { p2.finisherReady = true; p2.startMove('finisher'); }
+      if (rk['j'] && rk['k'] && rk['l']) { p2.startPower('ultimate'); }
+      else if (rk['j'] && rk['k'] && p1.state === 'finishable') { p2.finisherReady = true; p2.startMove('finisher'); }
+      else if (rk['l']) {
+        const fwd = p2.facing === 1 ? 'd' : 'a';
+        const back = p2.facing === 1 ? 'a' : 'd';
+        if (rk['s']) { p2.startPower('power1') || p2.startMove('special'); }
+        else if (rk[fwd]) { p2.startPower('power2') || p2.startMove('special'); }
+        else if (rk[back]) { p2.startPower('power3') || p2.startMove('special'); }
+        else p2.startMove('special');
+      }
       else if (rk['j']) p2.startMove('punch');
       else if (rk['k']) p2.startMove('kick');
-      else if (rk['l']) p2.startMove('special');
     }
   }
 }
@@ -2989,9 +3784,10 @@ function startRound() {
   if (mods.ohko) { p1.hp = 1; p1.maxHp = 1; p1.displayHp = 1; p2.hp = 1; p2.maxHp = 1; p2.displayHp = 1; }
   if (mods.tiny) { p1.w *= 0.5; p1.h *= 0.5; p2.w *= 0.5; p2.h *= 0.5; }
   if (mods.turbo) { p1.data = { ...p1.data, spd: p1.data.spd * 1.8 }; p2.data = { ...p2.data, spd: p2.data.spd * 1.8 }; }
-  projectiles = []; particles = [];
+  projectiles = []; particles = []; powerTexts = []; traps = []; clones = [];
   screenShake = 0; screenFlash = 0; comboCount = 0; comboTimer = 0;
   matchTimer = 99; matchTimerAccum = 0;
+  winProb = 0.5; commentary = { text: '', timer: 0, color: '#ffcc00', priority: 0 };
   // Intro dialogue on round 1
   if (roundNum === 1) {
     introDialogue1 = getIntro(selectedFighter.id);
@@ -3005,18 +3801,35 @@ function startRound() {
   announceColor = '#fff';
   if (!musicPlaying) startMusic();
   playSound('announce', 0.35);
+  // Arena commentary
+  if (roundNum === 1 && gameMode === 'arena') setTimeout(() => addCommentary('arena', 2, '#9d00ff'), 800);
+  // Evo commentary
+  if (roundNum === 1 && enemyFighter && (gameMode === '1p' || gameMode === 'tournament' || gameMode === 'arena')) {
+    const eEvo = getEvo(enemyFighter.id);
+    if (eEvo.level >= 3) setTimeout(() => addCommentary('evolved', 2, EVO_PERSONALITIES[eEvo.personality]?.color || '#ffcc00'), 1500);
+  }
+  if (roundNum > 1) setTimeout(() => addCommentary('roundStart', 1, '#ffffff'), 500);
 }
 function endRound(p1Won) {
   gameState = STATE.ROUND_END;
-  if (p1Won) {
-    p1Rounds++;
-    announceText = p2.state === 'ko' ? (p1.currentMove === p1.data.moves.finisher ? p1.data.moves.finisher.name + '!' : 'K.O.!') : 'K.O.!';
-    // Perfect win check
-    if (p1.hp === p1.maxHp) { announceText = 'PERFECT!'; }
+  const winner = p1Won ? p1 : p2;
+  const loser = p1Won ? p2 : p1;
+  if (p1Won) p1Rounds++; else p2Rounds++;
+  // Determine announce text based on kill type
+  const wasFinisher = winner.currentMove === winner.data.moves.finisher;
+  const wasUltKill = winner.currentPowerKey === 'ultimate';
+  const wasPowerKill = winner.currentPowerKey != null;
+  if (wasUltKill) {
+    announceText = winner.data.powers?.ultimate?.name ? winner.data.powers.ultimate.name.toUpperCase() + '!' : 'ULTIMATE K.O.!';
+  } else if (wasFinisher) {
+    announceText = winner.data.moves.finisher.name + '!';
+  } else if (wasPowerKill && winner.currentMove?.text) {
+    announceText = winner.currentMove.text;
   } else {
-    p2Rounds++; announceText = 'K.O.!';
+    announceText = 'K.O.!';
   }
-  announceTimer = 90; announceColor = p1Won ? '#00ff9d' : '#ff6b6b';
+  if (p1Won && p1.hp === p1.maxHp) announceText = 'PERFECT!';
+  announceTimer = wasUltKill ? 110 : 90; announceColor = p1Won ? '#00ff9d' : '#ff6b6b';
   roundNum++; slowMo = 15; screenShake = 16;
   playSound('ko', 0.5);
 }
@@ -3031,11 +3844,37 @@ function showVictory() {
   // Win quote
   const winQuotes = WIN_QUOTES[winner.data.id] || ['GG!'];
   const quote = winQuotes[Math.floor(Math.random() * winQuotes.length)];
-  document.getElementById('victory-sub').innerHTML = (p1Won ? (isPerfect ? 'FLAWLESS VICTORY' : 'VICTORY') : 'DEFEAT') +
-    `<div style="font-style:italic;color:${winner.data.color};font-size:0.85em;margin-top:4px">"${quote}"</div>`;
+  // Arena prediction result
+  let arenaResultHTML = '';
+  if (gameMode === 'arena' && arenaPrediction) {
+    const correct = (arenaPrediction === 'p1' && p1Won) || (arenaPrediction === 'p2' && !p1Won);
+    if (correct) { arenaPoints += 25; arenaResultHTML = '<div style="color:#00ff9d;font-weight:bold;font-size:1.1em;margin-top:6px">CORRECT PREDICTION! +25 pts</div>'; }
+    else { arenaPoints = Math.max(0, arenaPoints - 10); arenaResultHTML = '<div style="color:#ff4444;font-weight:bold;font-size:1.1em;margin-top:6px">WRONG PREDICTION! -10 pts</div>'; }
+    arenaResultHTML += `<div style="color:#aaa;font-size:0.8em">Arena Points: ${arenaPoints}</div>`;
+    saveArenaPoints();
+  }
 
-  // Record to career
-  recordMatch(p1Won, isPerfect, p1.maxCombo, p1.totalDmgDealt);
+  const resultLabel = gameMode === 'arena' ? '' : (p1Won ? (isPerfect ? 'FLAWLESS VICTORY' : 'VICTORY') : 'DEFEAT');
+  document.getElementById('victory-sub').innerHTML = resultLabel +
+    `<div style="font-style:italic;color:${winner.data.color};font-size:0.85em;margin-top:4px">"${quote}"</div>` + arenaResultHTML;
+
+  // Record to career (skip for arena)
+  if (gameMode !== 'arena') recordMatch(p1Won, isPerfect, p1.maxCombo, p1.totalDmgDealt);
+
+  // Evolution — evolve both fighters based on match outcome & player patterns
+  let evoResult1 = null, evoResult2 = null;
+  if (enemyFighter && (gameMode === '1p' || gameMode === 'tournament' || gameMode === 'arena')) {
+    if (gameMode !== 'arena') {
+      const playerPatterns = finalizePatterns(enemyFighter.id);
+      evoResult2 = evolveFighter(enemyFighter.id, !p1Won, { maxCombo: p2.maxCombo, dmgDealt: p2.totalDmgDealt, playerPatterns, opponentId: selectedFighter.id });
+      evoResult1 = evolveFighter(selectedFighter.id, p1Won, { maxCombo: p1.maxCombo, dmgDealt: p1.totalDmgDealt, opponentId: enemyFighter.id });
+    } else {
+      // Arena: both AI fighters evolve
+      evoResult1 = evolveFighter(selectedFighter.id, p1Won, { maxCombo: p1.maxCombo, dmgDealt: p1.totalDmgDealt, opponentId: enemyFighter.id });
+      evoResult2 = evolveFighter(enemyFighter.id, !p1Won, { maxCombo: p2.maxCombo, dmgDealt: p2.totalDmgDealt, opponentId: selectedFighter.id });
+    }
+  }
+  resetMatchPatterns();
 
   const rec = getFighterRecord(selectedFighter.id);
   const statsHTML = `
@@ -3048,12 +3887,60 @@ function showVictory() {
     <div class="s-key">${selectedFighter.name} Record</div><div class="s-val" style="color:${selectedFighter.color}">${rec.w}W - ${rec.l}L</div>
     <div class="s-key">Win Streak</div><div class="s-val" style="color:#ff1493">${career.currentStreak > 1 ? career.currentStreak + ' (active)' : career.winStreak + ' (best)'}</div>
     <div class="s-key">Total Damage</div><div class="s-val" style="color:#888">${career.totalDmg.toLocaleString()}</div>
+    ${(() => {
+      const selE = getEvo(selectedFighter.id);
+      const selP = EVO_PERSONALITIES[selE.personality] || EVO_PERSONALITIES.balanced;
+      return selE.level > 0 ? `<div class="s-key" style="grid-column:1/-1;border-top:1px solid #222;padding-top:6px;margin-top:4px;color:#555;font-size:0.7em">EVOLUTION</div><div></div>
+      <div class="s-key">${selectedFighter.name}</div><div class="s-val" style="color:${selP.color}">${selP.icon} EVO ${selE.level} ${selP.name}</div>` : '';
+    })()}
+    ${(() => {
+      if (!enemyFighter) return '';
+      const enE = getEvo(enemyFighter.id);
+      const enP = EVO_PERSONALITIES[enE.personality] || EVO_PERSONALITIES.balanced;
+      return enE.level > 0 ? `<div class="s-key">${enemyFighter.name}</div><div class="s-val" style="color:${enP.color}">${enP.icon} EVO ${enE.level} ${enP.name}</div>` : '';
+    })()}
   `;
   document.getElementById('victory-stats').innerHTML = statsHTML;
+  // Show X challenge button for online matches
+  const xChalBtn = document.getElementById('x-challenge-btn');
+  if (xChalBtn) xChalBtn.style.display = gameMode === 'online' ? 'inline-block' : 'none';
   document.getElementById('victory-overlay').classList.add('show');
 
-  // Confetti
-  spawnConfetti(W / 2, H / 3, p1Won ? 50 : 15);
+  // Token gate notification — show when capped
+  if (evoResult1 && !evoResult1.leveledUp && evoResult1.level >= EVO_FREE_CAP && !isHolder()) {
+    const gateLine = document.createElement('div');
+    gateLine.style.cssText = 'color:#ff8800;font-size:0.85em;margin-top:8px;cursor:pointer;text-decoration:underline';
+    gateLine.textContent = `${selectedFighter.name} is at EVO ${EVO_FREE_CAP} cap — hold $TKCL to keep evolving!`;
+    gateLine.onclick = () => showTokenGate();
+    document.getElementById('victory-sub').appendChild(gateLine);
+  }
+
+  // Evolution celebration — level up notification
+  if (evoResult1 && evoResult1.leveledUp) {
+    const pers = EVO_PERSONALITIES[evoResult1.personality] || EVO_PERSONALITIES.balanced;
+    const evoLine = document.createElement('div');
+    evoLine.style.cssText = `color:${pers.color};font-weight:bold;font-size:1.1em;margin-top:8px;text-shadow:0 0 10px ${pers.color}`;
+    evoLine.textContent = `${pers.icon} ${selectedFighter.name} EVOLVED to EVO ${evoResult1.newLevel}! ${pers.icon}`;
+    document.getElementById('victory-sub').appendChild(evoLine);
+    if (evoResult1.newTraits.length > 0) {
+      const traitLine = document.createElement('div');
+      traitLine.style.cssText = `color:#ffd700;font-size:0.8em;margin-top:4px`;
+      traitLine.textContent = 'New trait: ' + evoResult1.newTraits.map(t => EVO_TRAITS.find(et => et.id === t)?.name).filter(Boolean).join(', ');
+      document.getElementById('victory-sub').appendChild(traitLine);
+    }
+    setTimeout(() => playSound('evolve', 0.4), 300);
+  }
+  if (evoResult2 && evoResult2.leveledUp) {
+    const pers = EVO_PERSONALITIES[evoResult2.personality] || EVO_PERSONALITIES.balanced;
+    const evoLine = document.createElement('div');
+    evoLine.style.cssText = `color:${pers.color};font-size:0.8em;margin-top:4px;opacity:0.7`;
+    evoLine.textContent = `${enemyFighter.name} evolved to EVO ${evoResult2.newLevel}`;
+    document.getElementById('victory-sub').appendChild(evoLine);
+  }
+
+  // Confetti — extra for level-ups
+  const evoConfetti = (evoResult1?.leveledUp ? 30 : 0);
+  spawnConfetti(W / 2, H / 3, (p1Won ? 50 : 15) + evoConfetti);
   if (p1Won) playSound('announce', 0.4);
 
   // Submit to global leaderboard
@@ -3106,7 +3993,8 @@ function gameLoop() {
     handleInput();
     if (gameMode === 'online' && frameCount % 3 === 0) sendOnlineInputs();
     p1.update(p2); p2.update(p1);
-    updateProjectiles(); updateParticles();
+    updateProjectiles(); updateParticles(); updatePowerTexts(); updateTraps(); updateClones();
+    updateCommentary(); updateWinProb();
     // Training mode: dummy regens, no KO
     if (gameMode === 'training' && p2.trainingDummy) {
       if (p2.hp < p2.maxHp) p2.hp = Math.min(p2.maxHp, p2.hp + 0.3);
@@ -3146,8 +4034,10 @@ function drawFrame() {
   if (screenShake > 0) ctx.translate((Math.random()-0.5)*screenShake*2, (Math.random()-0.5)*screenShake*2);
   drawBackground();
   if (p1 && p2) { p1.draw(); p2.draw(); }
+  drawTraps(); drawClones();
   drawProjectiles(); drawParticles();
   if (p1 && p2) drawHUD();
+  drawPowerTexts();
   // Screen flash overlay
   if (screenFlash > 0) {
     ctx.globalAlpha = screenFlash / 8;
@@ -3156,6 +4046,7 @@ function drawFrame() {
     ctx.globalAlpha = 1;
     screenFlash--;
   }
+  drawToast();
   ctx.restore();
 }
 
@@ -3169,6 +4060,12 @@ const FIGHTERS = [
       kick:     { name: 'Such Kick', dmg: 11, startup: 6, active: 5, recovery: 10, range: 60, color: '#e8d48b' },
       special:  { name: 'Wow Beam', dmg: 18, startup: 10, active: 8, recovery: 14, range: 70, color: '#ffcc00', projectile: true, projSpd: 7, projColor: '#ffd700' },
       finisher: { name: 'TO THE MOON', dmg: 45, startup: 8, active: 10, recovery: 16, range: 65, color: '#ffd700', launch: true, shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'Much Wow', type: 'aoe', dmg: 14, startup: 8, active: 10, recovery: 14, range: 120, color: '#ffd700', cooldown: 180, text: 'MUCH WOW!', radius: 110, texts: ['Much Damage','Very Pain','So Combo','Wow'] },
+      power2: { name: 'To The Moon', type: 'launch', dmg: 18, startup: 6, active: 8, recovery: 12, range: 65, color: '#ffd700', cooldown: 150, text: 'TO THE MOON!', launch: true, shakeScreen: true },
+      power3: { name: 'Diamond Paws', type: 'buff', dmg: 0, startup: 4, active: 180, recovery: 6, range: 0, color: '#00ffff', cooldown: 360, text: 'DIAMOND PAWS!', buffType: 'armor', buffValue: 0.5 },
+      ultimate: { name: 'MOON ROCKET', type: 'cinematic', dmg: 55, startup: 12, active: 14, recovery: 18, range: 80, color: '#ffd700', cooldown: 0, text: 'TO THE MOOOON!!!', launch: true, shakeScreen: true, unblockable: true, meterCost: 100 }
     }
   },
   {
@@ -3179,6 +4076,12 @@ const FIGHTERS = [
       kick:     { name: 'Frog Kick', dmg: 12, startup: 5, active: 6, recovery: 9, range: 58, color: '#3cb043', leaps: true },
       special:  { name: 'Feels Bad Man', dmg: 20, startup: 8, active: 10, recovery: 12, range: 0, color: '#00ff66', teleport: true },
       finisher: { name: 'ULTRA RARE', dmg: 50, startup: 10, active: 8, recovery: 18, range: 60, color: '#00ff66', launch: true, shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'Rare Spawn', type: 'clone', dmg: 12, startup: 8, active: 60, recovery: 10, range: 0, color: '#00ff66', cooldown: 240, text: 'RARE SPAWN!' },
+      power2: { name: 'Feels Good Man', type: 'grab', dmg: 16, startup: 6, active: 6, recovery: 14, range: 55, color: '#3cb043', cooldown: 150, text: 'FEELS GOOD!', steal: 0.2 },
+      power3: { name: 'Kek Shield', type: 'counter', dmg: 20, startup: 3, active: 30, recovery: 10, range: 0, color: '#00ff66', cooldown: 180, text: 'KEKW!' },
+      ultimate: { name: 'ULTRA RARE PEPE', type: 'cinematic', dmg: 52, startup: 10, active: 12, recovery: 16, range: 70, color: '#00ff66', cooldown: 0, text: 'ULTRA RARE!!!', launch: true, shakeScreen: true, unblockable: true, teleport: true, meterCost: 100 }
     }
   },
   {
@@ -3189,6 +4092,12 @@ const FIGHTERS = [
       kick:     { name: 'Dash Kick', dmg: 10, startup: 4, active: 5, recovery: 7, range: 55, color: '#ffa500', dash: 120 },
       special:  { name: 'Shiba Rush', dmg: 5, startup: 5, active: 12, recovery: 10, range: 50, color: '#ff8c00', multihit: 4, dash: 180 },
       finisher: { name: 'DOGE KILLER', dmg: 42, startup: 6, active: 8, recovery: 14, range: 55, color: '#ff6600', shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'Shib Army', type: 'summon', dmg: 4, startup: 6, active: 80, recovery: 10, range: 0, color: '#ff8c00', cooldown: 200, text: 'SHIB ARMY!', summonCount: 5 },
+      power2: { name: 'Burn', type: 'projectile', dmg: 8, startup: 5, active: 8, recovery: 10, range: 0, color: '#ff4400', cooldown: 120, text: 'BURNED!', projectile: true, projSpd: 9, projColor: '#ff6600', dot: true, dotDmg: 2, dotDur: 45 },
+      power3: { name: 'Community Shield', type: 'buff', dmg: 0, startup: 3, active: 120, recovery: 8, range: 0, color: '#ffa500', cooldown: 300, text: 'COMMUNITY!', buffType: 'absorb', buffValue: 0.6 },
+      ultimate: { name: 'SHIBA TSUNAMI', type: 'cinematic', dmg: 48, startup: 8, active: 16, recovery: 14, range: 100, color: '#ff8c00', cooldown: 0, text: 'SHIBA TSUNAMI!!!', shakeScreen: true, unblockable: true, meterCost: 100 }
     }
   },
   {
@@ -3199,6 +4108,12 @@ const FIGHTERS = [
       kick:     { name: 'Stomp', dmg: 12, startup: 7, active: 6, recovery: 10, range: 55, color: '#cc6600', shakeScreen: true },
       special:  { name: 'BONK!', dmg: 28, startup: 14, active: 8, recovery: 18, range: 75, color: '#ff4400', launch: true, shakeScreen: true },
       finisher: { name: 'MEGA BONK', dmg: 55, startup: 12, active: 10, recovery: 20, range: 70, color: '#ff2200', launch: true, shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'BONK!', type: 'aoe', dmg: 22, startup: 14, active: 8, recovery: 16, range: 90, color: '#ff4400', cooldown: 180, text: 'BONK!', radius: 90, shakeScreen: true },
+      power2: { name: 'Home Run', type: 'reflect', dmg: 20, startup: 8, active: 10, recovery: 14, range: 70, color: '#ff8c00', cooldown: 150, text: 'HOME RUN!', launch: true, shakeScreen: true },
+      power3: { name: 'Horny Jail', type: 'trap', dmg: 5, startup: 10, active: 90, recovery: 12, range: 0, color: '#ff6600', cooldown: 300, text: 'HORNY JAIL!', trapDur: 90 },
+      ultimate: { name: 'GIGA BONK', type: 'cinematic', dmg: 60, startup: 14, active: 12, recovery: 18, range: 85, color: '#ff2200', cooldown: 0, text: 'GIGA BONK!!!', launch: true, shakeScreen: true, unblockable: true, meterCost: 100 }
     }
   },
   {
@@ -3209,6 +4124,12 @@ const FIGHTERS = [
       kick:     { name: 'Boot Stomp', dmg: 11, startup: 6, active: 5, recovery: 10, range: 54, color: '#8b5cf6' },
       special:  { name: 'Hat Shield', dmg: 0, startup: 3, active: 45, recovery: 8, range: 0, color: '#00ffff', shield: true },
       finisher: { name: 'HAT TRICK', dmg: 48, startup: 10, active: 10, recovery: 18, range: 65, color: '#a855f7', shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'Hat Toss', type: 'projectile', dmg: 14, startup: 6, active: 8, recovery: 10, range: 0, color: '#8b5cf6', cooldown: 120, text: 'HAT TOSS!', projectile: true, projSpd: 7, projColor: '#b794f6', boomerang: true },
+      power2: { name: 'Hat Fortress', type: 'buff', dmg: 0, startup: 4, active: 240, recovery: 8, range: 0, color: '#00ffff', cooldown: 360, text: 'FORTRESS!', buffType: 'armor', buffValue: 0.6 },
+      power3: { name: 'Counter Hat', type: 'counter', dmg: 18, startup: 3, active: 30, recovery: 10, range: 0, color: '#a855f7', cooldown: 180, text: 'COUNTERED!' },
+      ultimate: { name: 'HAT DIMENSION', type: 'cinematic', dmg: 50, startup: 10, active: 14, recovery: 16, range: 80, color: '#a855f7', cooldown: 0, text: 'HAT DIMENSION!!!', shakeScreen: true, unblockable: true, meterCost: 100 }
     }
   },
   {
@@ -3219,6 +4140,12 @@ const FIGHTERS = [
       kick:     { name: 'Shield Bash', dmg: 9, startup: 4, active: 5, recovery: 8, range: 50, color: '#c0392b' },
       special:  { name: 'Berserker Rage', dmg: 8, startup: 6, active: 14, recovery: 12, range: 60, color: '#ff0000', multihit: 3, dash: 150 },
       finisher: { name: 'VALHALLA', dmg: 52, startup: 10, active: 8, recovery: 18, range: 65, color: '#ff1100', launch: true, shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'Axe Throw', type: 'projectile', dmg: 16, startup: 8, active: 8, recovery: 12, range: 0, color: '#e74c3c', cooldown: 130, text: 'AXE!', projectile: true, projSpd: 8, projColor: '#ff7675', boomerang: true },
+      power2: { name: 'Valhalla Charge', type: 'dash_attack', dmg: 18, startup: 6, active: 10, recovery: 14, range: 70, color: '#ff0000', cooldown: 150, text: 'VALHALLA!', dash: 220 },
+      power3: { name: 'Ragnarok', type: 'aoe', dmg: 20, startup: 12, active: 10, recovery: 16, range: 130, color: '#ff3300', cooldown: 240, text: 'RAGNAROK!', radius: 130, shakeScreen: true },
+      ultimate: { name: 'VIKING FURY', type: 'cinematic', dmg: 54, startup: 10, active: 14, recovery: 16, range: 80, color: '#ff0000', cooldown: 0, text: 'VIKING FURY!!!', launch: true, shakeScreen: true, unblockable: true, dash: 200, meterCost: 100 }
     }
   },
   {
@@ -3229,6 +4156,12 @@ const FIGHTERS = [
       kick:     { name: 'Executive Kick', dmg: 12, startup: 6, active: 6, recovery: 10, range: 58, color: '#dc3545' },
       special:  { name: 'Gold Blast', dmg: 22, startup: 10, active: 8, recovery: 14, range: 70, color: '#ffd700', projectile: true, projSpd: 9, projColor: '#ffaa00' },
       finisher: { name: 'YOURE FIRED', dmg: 50, startup: 10, active: 10, recovery: 18, range: 65, color: '#ff4444', launch: true, shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'Executive Order', type: 'buff', dmg: 0, startup: 6, active: 240, recovery: 8, range: 0, color: '#ffd700', cooldown: 300, text: 'EXECUTIVE ORDER!', buffType: 'damage', buffValue: 1.4 },
+      power2: { name: 'Wall Builder', type: 'projectile', dmg: 16, startup: 8, active: 10, recovery: 12, range: 0, color: '#dc3545', cooldown: 140, text: 'BUILD THE WALL!', projectile: true, projSpd: 6, projColor: '#ffd700' },
+      power3: { name: 'The Deal', type: 'grab', dmg: 18, startup: 6, active: 6, recovery: 14, range: 55, color: '#ffd700', cooldown: 150, text: 'ART OF THE DEAL!', steal: 0.15 },
+      ultimate: { name: 'YOURE ALL FIRED', type: 'cinematic', dmg: 52, startup: 10, active: 14, recovery: 16, range: 90, color: '#ffd700', cooldown: 0, text: 'YOURE ALL FIRED!!!', launch: true, shakeScreen: true, unblockable: true, meterCost: 100 }
     }
   },
   {
@@ -3239,6 +4172,12 @@ const FIGHTERS = [
       kick:     { name: 'Phantom Kick', dmg: 10, startup: 3, active: 5, recovery: 6, range: 52, color: '#14b8a6', dash: 100 },
       special:  { name: 'Shadow Step', dmg: 22, startup: 6, active: 6, recovery: 10, range: 0, color: '#00ffcc', teleport: true },
       finisher: { name: 'SOLANA SLASH', dmg: 48, startup: 6, active: 8, recovery: 16, range: 58, color: '#00ffd5', shakeScreen: true, unblockable: true, steal: 0.3 }
+    },
+    powers: {
+      power1: { name: 'Shadow Step', type: 'teleport', dmg: 16, startup: 4, active: 6, recovery: 10, range: 0, color: '#00ffcc', cooldown: 120, text: 'SHADOW!', teleport: true },
+      power2: { name: 'Phantom Rush', type: 'dash_attack', dmg: 14, startup: 3, active: 8, recovery: 12, range: 60, color: '#14b8a6', cooldown: 100, text: 'PHANTOM!', dash: 250, multihit: 3 },
+      power3: { name: 'Vanish', type: 'buff', dmg: 0, startup: 2, active: 90, recovery: 6, range: 0, color: '#00ffd5', cooldown: 240, text: 'VANISH!', buffType: 'invis', buffValue: 0.7 },
+      ultimate: { name: 'SOLANA SPEED', type: 'cinematic', dmg: 50, startup: 5, active: 14, recovery: 14, range: 70, color: '#00ffd5', cooldown: 0, text: 'SOLANA SPEED!!!', shakeScreen: true, unblockable: true, teleport: true, multihit: 6, meterCost: 100 }
     }
   },
   {
@@ -3249,6 +4188,12 @@ const FIGHTERS = [
       kick:     { name: 'Neon Kick', dmg: 13, startup: 5, active: 6, recovery: 9, range: 60, color: '#ff1493', dash: 100 },
       special:  { name: 'Neon Burst', dmg: 20, startup: 8, active: 10, recovery: 12, range: 75, color: '#ff1493', projectile: true, projSpd: 10, projColor: '#00ffff' },
       finisher: { name: 'CHAIN BREAK', dmg: 55, startup: 8, active: 12, recovery: 16, range: 70, color: '#ff1493', launch: true, shakeScreen: true, unblockable: true, steal: 0.2 }
+    },
+    powers: {
+      power1: { name: 'Signal Pulse', type: 'aoe', dmg: 12, startup: 6, active: 10, recovery: 12, range: 140, color: '#00ffff', cooldown: 150, text: 'ANALYZED!', radius: 140, stun: 30 },
+      power2: { name: '33-Layer Strike', type: 'dash_attack', dmg: 6, startup: 6, active: 16, recovery: 14, range: 65, color: '#ff1493', cooldown: 180, text: '33 LAYERS!', dash: 180, multihit: 6 },
+      power3: { name: 'Regime Shift', type: 'buff', dmg: 0, startup: 4, active: 200, recovery: 8, range: 0, color: '#9d00ff', cooldown: 360, text: 'REGIME SHIFT!', buffType: 'regime', buffValue: 1.5 },
+      ultimate: { name: 'CHAIN BREAK OMEGA', type: 'cinematic', dmg: 60, startup: 8, active: 16, recovery: 16, range: 80, color: '#ff1493', cooldown: 0, text: 'CHAIN BREAK!!!', launch: true, shakeScreen: true, unblockable: true, steal: 0.3, meterCost: 100 }
     }
   }
 ];
@@ -3262,6 +4207,12 @@ const BOT_FIGHTERS = [
       kick:     { name: 'Scope Kick', dmg: 10, startup: 4, active: 5, recovery: 7, range: 55, color: '#ff4400', dash: 100 },
       special:  { name: 'Headshot', dmg: 24, startup: 6, active: 4, recovery: 12, range: 80, color: '#ff0000', projectile: true, projSpd: 12, projColor: '#ff4400' },
       finisher: { name: 'KILLSHOT', dmg: 48, startup: 5, active: 8, recovery: 14, range: 60, color: '#ff0000', shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'Laser Snipe', type: 'projectile', dmg: 22, startup: 8, active: 4, recovery: 14, range: 0, color: '#ff0000', cooldown: 160, text: 'SNIPED!', projectile: true, projSpd: 18, projColor: '#ff4400' },
+      power2: { name: 'Flash Entry', type: 'teleport', dmg: 18, startup: 4, active: 6, recovery: 12, range: 0, color: '#ff4400', cooldown: 140, text: 'FLASH ENTRY!', teleport: true },
+      power3: { name: 'Target Lock', type: 'buff', dmg: 0, startup: 3, active: 180, recovery: 6, range: 0, color: '#ff0000', cooldown: 240, text: 'TARGET LOCKED!', buffType: 'crit', buffValue: 2.0 },
+      ultimate: { name: 'PERFECT SHOT', type: 'cinematic', dmg: 55, startup: 6, active: 10, recovery: 14, range: 90, color: '#ff0000', cooldown: 0, text: 'PERFECT SHOT!!!', shakeScreen: true, unblockable: true, meterCost: 100 }
     }
   },
   {
@@ -3272,6 +4223,12 @@ const BOT_FIGHTERS = [
       kick:     { name: 'Wall Kick', dmg: 11, startup: 7, active: 5, recovery: 10, range: 54, color: '#00cccc' },
       special:  { name: 'Grid Shield', dmg: 0, startup: 3, active: 50, recovery: 8, range: 0, color: '#00ffff', shield: true },
       finisher: { name: 'GRID LOCK', dmg: 46, startup: 12, active: 10, recovery: 18, range: 65, color: '#00ffff', shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'Grid Wall', type: 'buff', dmg: 0, startup: 4, active: 150, recovery: 8, range: 0, color: '#00ffff', cooldown: 240, text: 'GRID WALL!', buffType: 'wall', buffValue: 0.7 },
+      power2: { name: 'Range Trap', type: 'trap', dmg: 16, startup: 8, active: 300, recovery: 10, range: 0, color: '#00cccc', cooldown: 200, text: 'TRAPPED!', trapDur: 60 },
+      power3: { name: 'Rebalance', type: 'heal', dmg: 0, startup: 10, active: 1, recovery: 20, range: 0, color: '#00ff9d', cooldown: 360, text: 'REBALANCED!', healAmount: 20 },
+      ultimate: { name: 'GRID FORTRESS', type: 'cinematic', dmg: 48, startup: 12, active: 14, recovery: 18, range: 80, color: '#00ffff', cooldown: 0, text: 'GRID FORTRESS!!!', shakeScreen: true, unblockable: true, meterCost: 100 }
     }
   },
   {
@@ -3282,6 +4239,12 @@ const BOT_FIGHTERS = [
       kick:     { name: 'Metal Stomp', dmg: 12, startup: 6, active: 6, recovery: 10, range: 55, color: '#c0c0c0', shakeScreen: true },
       special:  { name: 'Liquidate', dmg: 26, startup: 12, active: 8, recovery: 16, range: 70, color: '#ff3333', launch: true, shakeScreen: true },
       finisher: { name: 'MARGIN CALL', dmg: 54, startup: 10, active: 10, recovery: 20, range: 70, color: '#ff0000', launch: true, shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'Margin Call', type: 'grab', dmg: 30, startup: 8, active: 6, recovery: 18, range: 55, color: '#ff3333', cooldown: 240, text: 'LIQUIDATED!', unblockable: true, executeThreshold: 0.4 },
+      power2: { name: 'Cascade', type: 'aoe', dmg: 18, startup: 10, active: 10, recovery: 16, range: 110, color: '#c0c0c0', cooldown: 180, text: 'CASCADE!', radius: 110, shakeScreen: true },
+      power3: { name: 'Underwater', type: 'buff', dmg: 0, startup: 3, active: 240, recovery: 6, range: 0, color: '#ff0000', cooldown: 300, text: 'UNDERWATER!', buffType: 'rage', buffValue: 1.5 },
+      ultimate: { name: 'TOTAL LIQUIDATION', type: 'cinematic', dmg: 58, startup: 10, active: 14, recovery: 18, range: 85, color: '#ff0000', cooldown: 0, text: 'TOTAL LIQUIDATION!!!', launch: true, shakeScreen: true, unblockable: true, meterCost: 100 }
     }
   },
   {
@@ -3292,6 +4255,12 @@ const BOT_FIGHTERS = [
       kick:     { name: 'Back Slice', dmg: 11, startup: 5, active: 6, recovery: 9, range: 56, color: '#DAA520', leaps: true },
       special:  { name: 'Sandwich Attack', dmg: 18, startup: 6, active: 10, recovery: 10, range: 0, color: '#ffcc00', teleport: true },
       finisher: { name: 'MEV EXTRACT', dmg: 50, startup: 8, active: 8, recovery: 16, range: 60, color: '#ffd700', launch: true, shakeScreen: true, unblockable: true, steal: 0.3 }
+    },
+    powers: {
+      power1: { name: 'Front-Run', type: 'teleport', dmg: 14, startup: 4, active: 6, recovery: 10, range: 0, color: '#ffcc00', cooldown: 130, text: "FRONT-RUN'D!", teleport: true },
+      power2: { name: 'MEV Extract', type: 'meter_steal', dmg: 10, startup: 6, active: 6, recovery: 14, range: 60, color: '#ffd700', cooldown: 200, text: 'MEV EXTRACTED!', stealAmount: 30 },
+      power3: { name: 'Backrun', type: 'counter', dmg: 22, startup: 3, active: 30, recovery: 10, range: 0, color: '#DAA520', cooldown: 180, text: 'BACKRUN!' },
+      ultimate: { name: 'FULL SANDWICH', type: 'cinematic', dmg: 54, startup: 8, active: 14, recovery: 16, range: 75, color: '#ffd700', cooldown: 0, text: 'FULL SANDWICH!!!', launch: true, shakeScreen: true, unblockable: true, teleport: true, meterCost: 100 }
     }
   },
   {
@@ -3302,6 +4271,12 @@ const BOT_FIGHTERS = [
       kick:     { name: 'Sell Kick', dmg: 11, startup: 6, active: 5, recovery: 10, range: 58, color: '#ff4444' },
       special:  { name: 'Arb Flash', dmg: 16, startup: 7, active: 8, recovery: 11, range: 0, color: '#9d5ce5', teleport: true },
       finisher: { name: 'PRICE IMPACT', dmg: 46, startup: 8, active: 10, recovery: 16, range: 65, color: '#ffd700', launch: true, shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'Exploit Gap', type: 'counter', dmg: 20, startup: 3, active: 25, recovery: 10, range: 0, color: '#00ff66', cooldown: 150, text: 'EXPLOITED!' },
+      power2: { name: 'Cross-Chain', type: 'dash_attack', dmg: 6, startup: 5, active: 12, recovery: 12, range: 60, color: '#9d5ce5', cooldown: 160, text: 'CROSS-CHAIN!', dash: 200, multihit: 4 },
+      power3: { name: 'Profit Take', type: 'buff', dmg: 0, startup: 4, active: 120, recovery: 8, range: 0, color: '#ffd700', cooldown: 300, text: 'PROFIT TAKEN!', buffType: 'damage', buffValue: 1.3 },
+      ultimate: { name: 'ATOMIC ARB', type: 'cinematic', dmg: 52, startup: 8, active: 14, recovery: 16, range: 80, color: '#9d5ce5', cooldown: 0, text: 'ATOMIC ARB!!!', launch: true, shakeScreen: true, unblockable: true, teleport: true, meterCost: 100 }
     }
   },
   {
@@ -3312,6 +4287,12 @@ const BOT_FIGHTERS = [
       kick:     { name: 'Volt Kick', dmg: 10, startup: 4, active: 5, recovery: 7, range: 54, color: '#ffe600', dash: 130 },
       special:  { name: 'Flash Loan', dmg: 30, startup: 4, active: 6, recovery: 20, range: 65, color: '#ffe600', dash: 200 },
       finisher: { name: 'FLASH CRASH', dmg: 58, startup: 6, active: 6, recovery: 22, range: 60, color: '#ffff00', shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'Flash Loan', type: 'buff', dmg: 0, startup: 3, active: 180, recovery: 6, range: 0, color: '#ffe600', cooldown: 300, text: 'FLASH LOAN!', buffType: 'flashloan', buffValue: 2.0, selfDmgPct: 0.3 },
+      power2: { name: 'Speed Blitz', type: 'dash_attack', dmg: 5, startup: 3, active: 12, recovery: 14, range: 55, color: '#ffff66', cooldown: 140, text: 'SPEED BLITZ!', dash: 250, multihit: 6 },
+      power3: { name: 'Repay', type: 'counter', dmg: 24, startup: 3, active: 20, recovery: 10, range: 0, color: '#ffe600', cooldown: 200, text: 'REPAID!' },
+      ultimate: { name: 'FLASH CRASH', type: 'cinematic', dmg: 60, startup: 5, active: 12, recovery: 20, range: 75, color: '#ffff00', cooldown: 0, text: 'FLASH CRASH!!!', shakeScreen: true, unblockable: true, dash: 300, meterCost: 100 }
     }
   },
   {
@@ -3322,6 +4303,12 @@ const BOT_FIGHTERS = [
       kick:     { name: 'Whale Tail', dmg: 12, startup: 7, active: 6, recovery: 10, range: 58, color: '#2255aa', shakeScreen: true },
       special:  { name: 'Market Dump', dmg: 22, startup: 14, active: 10, recovery: 18, range: 80, color: '#2255aa', projectile: true, projSpd: 5, projColor: '#4488cc' },
       finisher: { name: 'WHALE SPLASH', dmg: 52, startup: 14, active: 12, recovery: 22, range: 75, color: '#0066ff', launch: true, shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'Splash', type: 'aoe', dmg: 18, startup: 12, active: 10, recovery: 16, range: 140, color: '#4488cc', cooldown: 200, text: 'WHALE ALERT!', radius: 140, shakeScreen: true },
+      power2: { name: 'Market Move', type: 'grab', dmg: 16, startup: 8, active: 6, recovery: 16, range: 60, color: '#2255aa', cooldown: 180, text: 'MARKET MOVED!', launch: true, shakeScreen: true },
+      power3: { name: 'Deep Bid', type: 'counter', dmg: 22, startup: 4, active: 30, recovery: 12, range: 0, color: '#0066ff', cooldown: 200, text: 'DEEP BID!' },
+      ultimate: { name: 'WHALE TSUNAMI', type: 'cinematic', dmg: 56, startup: 14, active: 16, recovery: 20, range: 100, color: '#0066ff', cooldown: 0, text: 'WHALE TSUNAMI!!!', launch: true, shakeScreen: true, unblockable: true, meterCost: 100 }
     }
   },
   {
@@ -3332,6 +4319,12 @@ const BOT_FIGHTERS = [
       kick:     { name: 'Dollar Kick', dmg: 10, startup: 5, active: 5, recovery: 9, range: 56, color: '#33aa33' },
       special:  { name: 'Stack Sats', dmg: 6, startup: 5, active: 14, recovery: 10, range: 55, color: '#00ff44', multihit: 4, dash: 140 },
       finisher: { name: 'COMPOUND', dmg: 44, startup: 10, active: 10, recovery: 16, range: 65, color: '#00ff00', launch: true, shakeScreen: true, unblockable: true }
+    },
+    powers: {
+      power1: { name: 'Stack Up', type: 'buff', dmg: 0, startup: 5, active: 300, recovery: 8, range: 0, color: '#44cc44', cooldown: 180, text: 'STACKING...', buffType: 'stack', buffValue: 0.15, maxStacks: 5 },
+      power2: { name: 'Dollar Cost Average', type: 'dash_attack', dmg: 6, startup: 4, active: 8, recovery: 10, range: 55, color: '#33aa33', cooldown: 80, text: 'DCA!', dash: 100, steal: 0.3 },
+      power3: { name: 'Compound', type: 'buff', dmg: 0, startup: 3, active: 180, recovery: 6, range: 0, color: '#00ff00', cooldown: 300, text: 'COMPOUNDING!', buffType: 'compound', buffValue: 4 },
+      ultimate: { name: 'INFINITE DCA', type: 'cinematic', dmg: 50, startup: 10, active: 16, recovery: 16, range: 80, color: '#00ff00', cooldown: 0, text: 'INFINITE DCA!!!', launch: true, shakeScreen: true, unblockable: true, multihit: 8, meterCost: 100 }
     }
   },
   {
@@ -3342,9 +4335,48 @@ const BOT_FIGHTERS = [
       kick:     { name: 'Neon Kick', dmg: 13, startup: 5, active: 6, recovery: 9, range: 60, color: '#ff1493', dash: 100 },
       special:  { name: 'Neon Burst', dmg: 20, startup: 8, active: 10, recovery: 12, range: 75, color: '#ff1493', projectile: true, projSpd: 10, projColor: '#00ffff' },
       finisher: { name: 'CHAIN BREAK', dmg: 55, startup: 8, active: 12, recovery: 16, range: 70, color: '#ff1493', launch: true, shakeScreen: true, unblockable: true, steal: 0.2 }
+    },
+    powers: {
+      power1: { name: 'Signal Pulse', type: 'aoe', dmg: 12, startup: 6, active: 10, recovery: 12, range: 140, color: '#00ffff', cooldown: 150, text: 'ANALYZED!', radius: 140, stun: 30 },
+      power2: { name: '33-Layer Strike', type: 'dash_attack', dmg: 6, startup: 6, active: 16, recovery: 14, range: 65, color: '#ff1493', cooldown: 180, text: '33 LAYERS!', dash: 180, multihit: 6 },
+      power3: { name: 'Regime Shift', type: 'buff', dmg: 0, startup: 4, active: 200, recovery: 8, range: 0, color: '#9d00ff', cooldown: 360, text: 'REGIME SHIFT!', buffType: 'regime', buffValue: 1.5 },
+      ultimate: { name: 'CHAIN BREAK OMEGA', type: 'cinematic', dmg: 60, startup: 8, active: 16, recovery: 16, range: 80, color: '#ff1493', cooldown: 0, text: 'CHAIN BREAK!!!', launch: true, shakeScreen: true, unblockable: true, steal: 0.3, meterCost: 100 }
     }
   }
 ];
+
+// ====================== MATCHUP COUNTER-PICKS ======================
+// Special interactions: attacker_id + power_type vs defender_id → bonus effect
+const MATCHUP_COUNTERS = {
+  // GridBot's wall blocks SnipeBot's lasers (reduced damage)
+  'gridbot_vs_snipebot': { msg: 'WALL ABSORBS LASER!', dmgMult: 0.4, color: '#00ffff' },
+  // Sandwich steals FlashBot's buff (extra meter steal)
+  'sandwich_vs_flashbot': { msg: 'LOAN INTERCEPTED!', meterSteal: 20, color: '#ffd700' },
+  // Liquidator executes DCA's stacks (bonus damage when DCA has stacks)
+  'liquidator_vs_dcabot': { msg: 'STACKS LIQUIDATED!', dmgMult: 1.4, color: '#ff3333' },
+  // Shib's speed beats Whale's slow attacks
+  'shib_vs_whalebot': { msg: 'TOO FAST!', dmgMult: 1.3, color: '#ffa500' },
+  // Floki's axes beat Pepe's clones
+  'floki_vs_pepe': { msg: 'CLONES CUT DOWN!', dmgMult: 1.2, color: '#e74c3c' },
+  // Bonk smashes through GridBot's wall
+  'bonk_vs_gridbot': { msg: 'WALL SMASHED!', dmgMult: 1.3, color: '#ff4400' },
+  // Samo assassinates Flash before Flash Loan pays off
+  'samo_vs_flashbot': { msg: 'TOO SLOW!', dmgMult: 1.3, color: '#00ffd5' },
+  // Trump's Wall blocks Sandwich's front-run
+  'trump_vs_sandwich': { msg: 'BLOCKED AT THE WALL!', dmgMult: 1.2, color: '#ffd700' },
+  // TinkClaw predicts Arbiter's moves
+  'tinkclaw_vs_arbbot': { msg: 'PREDICTED!', dmgMult: 1.25, color: '#ff1493' },
+  // Doge's community overwhelms Liquidator
+  'doge_vs_liquidator': { msg: 'COMMUNITY HOLDS!', dmgMult: 1.2, color: '#ffd700' },
+  // Wif tanks SnipeBot's shots
+  'wif_vs_snipebot': { msg: 'HAT DEFLECTS!', dmgMult: 0.6, color: '#8b5cf6' },
+  // ArbBot exploits Whale's slow moves
+  'arbbot_vs_whalebot': { msg: 'GAP EXPLOITED!', dmgMult: 1.3, color: '#9d5ce5' },
+};
+
+function getMatchupBonus(attackerId, defenderId) {
+  return MATCHUP_COUNTERS[attackerId + '_vs_' + defenderId] || null;
+}
 
 // Select roster based on URL mode
 const FIGHTERS_COIN = FIGHTERS;
@@ -3401,6 +4433,652 @@ function isBossUnlocked() {
   const nonBoss = FIGHTERS.filter(f => !f.boss).map(f => f.id);
   return nonBoss.every(id => career.beaten.includes(id));
 }
+
+// ====================== EVOLUTION DNA SYSTEM ======================
+// Each fighter evolves persistent stat mutations based on fight outcomes
+// Player pattern memory allows AI to adapt to your playstyle over time
+const EVO_KEY = GAME_MODE === 'bot' ? 'botclash_evo' : 'coinclash_evo';
+const PATTERN_KEY = GAME_MODE === 'bot' ? 'botclash_patterns' : 'coinclash_patterns';
+
+function defaultEvo() { return { fighters: {}, generation: 0 }; }
+function loadEvo() {
+  try { const d = JSON.parse(localStorage.getItem(EVO_KEY)); return d ? { ...defaultEvo(), ...d } : defaultEvo(); }
+  catch(e) { return defaultEvo(); }
+}
+function saveEvo() { try { localStorage.setItem(EVO_KEY, JSON.stringify(evoData)); } catch(e) {} }
+let evoData = loadEvo();
+
+function getEvo(fighterId) {
+  if (!evoData.fighters[fighterId]) {
+    evoData.fighters[fighterId] = {
+      level: 0, xp: 0,
+      dna: { aggro: 0, defense: 0, speed: 0, combo: 0, spacing: 0 }, // -1.0 to +1.0 mutations
+      personality: 'balanced', // balanced, aggressive, defensive, tricky, rusher
+      traits: [], // earned traits like "counter-puncher", "zone-breaker"
+      matchesPlayed: 0, wins: 0
+    };
+  }
+  return evoData.fighters[fighterId];
+}
+
+function getEvoLevel(fighterId) { return getEvo(fighterId).level; }
+
+// Personality names based on dominant DNA
+const EVO_PERSONALITIES = {
+  aggressive: { name: 'Aggressive', color: '#ff4444', icon: '⚔' },
+  defensive: { name: 'Defensive', color: '#4488ff', icon: '🛡' },
+  tricky: { name: 'Tricky', color: '#ff44ff', icon: '✦' },
+  rusher: { name: 'Rusher', color: '#ffaa00', icon: '⚡' },
+  balanced: { name: 'Balanced', color: '#00ff9d', icon: '◈' }
+};
+
+// Traits unlocked at milestones
+const EVO_TRAITS = [
+  { id: 'counter_puncher', name: 'Counter-Puncher', req: e => e.dna.defense > 0.4, desc: 'Blocks then retaliates' },
+  { id: 'rushdown', name: 'Rushdown', req: e => e.dna.aggro > 0.5 && e.dna.speed > 0.3, desc: 'Relentless pressure' },
+  { id: 'zoner', name: 'Zoner', req: e => e.dna.spacing > 0.4, desc: 'Keeps optimal distance' },
+  { id: 'combo_fiend', name: 'Combo Fiend', req: e => e.dna.combo > 0.5, desc: 'Chains hits relentlessly' },
+  { id: 'survivor', name: 'Survivor', req: e => e.wins >= 5 && e.dna.defense > 0.2, desc: 'Refuses to go down' },
+  { id: 'apex', name: 'Apex Predator', req: e => e.level >= 10, desc: 'Peak evolution' },
+];
+
+function updatePersonality(evo) {
+  const d = evo.dna;
+  const max = Math.max(Math.abs(d.aggro), Math.abs(d.defense), Math.abs(d.speed), Math.abs(d.combo), Math.abs(d.spacing));
+  if (max < 0.15) { evo.personality = 'balanced'; return; }
+  if (d.aggro >= max) evo.personality = 'aggressive';
+  else if (d.defense >= max) evo.personality = 'defensive';
+  else if (d.speed >= max || d.combo >= max) evo.personality = 'rusher';
+  else if (d.spacing >= max) evo.personality = 'tricky';
+  else evo.personality = 'balanced';
+}
+
+function updateTraits(evo) {
+  evo.traits = EVO_TRAITS.filter(t => t.req(evo)).map(t => t.id);
+}
+
+// Evolved move name prefixes
+function getEvolvedMoveName(baseName, evoLevel) {
+  if (evoLevel >= 15) return 'Omega ' + baseName;
+  if (evoLevel >= 10) return 'Ultra ' + baseName;
+  if (evoLevel >= 5) return 'Mega ' + baseName;
+  return baseName;
+}
+
+// Rivalry system — track repeated opponents
+function getRivalry(fighterId, opponentId) {
+  const evo = getEvo(fighterId);
+  if (!evo.rivals) evo.rivals = {};
+  if (!evo.rivals[opponentId]) evo.rivals[opponentId] = { fights: 0, wins: 0, losses: 0 };
+  return evo.rivals[opponentId];
+}
+
+function recordRivalry(fighterId, opponentId, won) {
+  const rival = getRivalry(fighterId, opponentId);
+  rival.fights++;
+  if (won) rival.wins++; else rival.losses++;
+  saveEvo();
+}
+
+function isRival(fighterId, opponentId) {
+  const evo = getEvo(fighterId);
+  return evo.rivals && evo.rivals[opponentId] && evo.rivals[opponentId].fights >= 3;
+}
+
+// Evolve a fighter's DNA after a match
+function evolveFighter(fighterId, won, matchData) {
+  const evo = getEvo(fighterId);
+  const oldLevel = evo.level;
+  const oldTraits = [...evo.traits];
+  evo.matchesPlayed++;
+  if (won) evo.wins++;
+
+  // Record rivalry
+  if (matchData.opponentId) recordRivalry(fighterId, matchData.opponentId, won);
+
+  // XP: base + bonus for winning, combos, damage
+  const xpBase = 10;
+  const xpWin = won ? 15 : 5;
+  const xpCombo = Math.min(20, (matchData.maxCombo || 0) * 2);
+  const xpDmg = Math.min(15, Math.floor((matchData.dmgDealt || 0) / 10));
+  evo.xp += xpBase + xpWin + xpCombo + xpDmg;
+
+  // Level up at thresholds (50 XP per level, increasing)
+  const xpForLevel = (lvl) => 50 + lvl * 20;
+  while (evo.xp >= xpForLevel(evo.level)) {
+    // Token gate: free tier caps at level 4
+    if (!isHolder() && evo.level >= EVO_FREE_CAP) {
+      evo.xp = xpForLevel(evo.level) - 1; // Cap XP just under
+      break;
+    }
+    evo.xp -= xpForLevel(evo.level);
+    evo.level++;
+    evoData.generation++;
+  }
+
+  // DNA mutation — small shifts based on what happened in the fight
+  const mutRate = 0.08; // How fast DNA shifts
+  const clamp = (v) => Math.max(-1, Math.min(1, v));
+
+  if (matchData.playerPatterns) {
+    const p = matchData.playerPatterns;
+    if (p.punchRate > 0.4) evo.dna.defense = clamp(evo.dna.defense + mutRate);
+    if (p.blockRate > 0.3) evo.dna.aggro = clamp(evo.dna.aggro + mutRate);
+    if (p.jumpRate > 0.25) evo.dna.spacing = clamp(evo.dna.spacing + mutRate);
+    if (p.avgCombo > 2) { evo.dna.defense = clamp(evo.dna.defense + mutRate * 0.5); evo.dna.speed = clamp(evo.dna.speed + mutRate * 0.5); }
+  }
+
+  // Win/loss mutation
+  if (won) {
+    evo.dna.aggro = clamp(evo.dna.aggro + mutRate * 0.3);
+    evo.dna.combo = clamp(evo.dna.combo + mutRate * 0.4);
+  } else {
+    evo.dna.defense = clamp(evo.dna.defense + mutRate * 0.5);
+    evo.dna.spacing = clamp(evo.dna.spacing + mutRate * 0.3);
+  }
+
+  updatePersonality(evo);
+  updateTraits(evo);
+  saveEvo();
+
+  // Return evolution result with level-up info
+  const leveledUp = evo.level > oldLevel;
+  const newTraits = evo.traits.filter(t => !oldTraits.includes(t));
+  return { ...evo, leveledUp, oldLevel, newLevel: evo.level, newTraits };
+}
+
+// ====================== PLAYER PATTERN TRACKER ======================
+// Tracks what the human player does so AI can adapt
+let patternData = { punch: 0, kick: 0, special: 0, block: 0, jump: 0, total: 0, comboHits: 0, comboCount: 0 };
+
+function defaultPatterns() { return {}; }
+function loadPatterns() {
+  try { const d = JSON.parse(localStorage.getItem(PATTERN_KEY)); return d || {}; }
+  catch(e) { return {}; }
+}
+function savePatterns() { try { localStorage.setItem(PATTERN_KEY, JSON.stringify(savedPatterns)); } catch(e) {} }
+let savedPatterns = loadPatterns();
+
+function getPatternProfile(fighterId) {
+  if (!savedPatterns[fighterId]) savedPatterns[fighterId] = { punch: 0, kick: 0, special: 0, block: 0, jump: 0, total: 1, matches: 0 };
+  return savedPatterns[fighterId];
+}
+
+function recordPattern(fighterId, action) {
+  const p = getPatternProfile(fighterId);
+  if (p[action] !== undefined) p[action]++;
+  p.total++;
+}
+
+function getPatternRates(fighterId) {
+  const p = getPatternProfile(fighterId);
+  const t = Math.max(1, p.total);
+  return { punchRate: p.punch / t, kickRate: p.kick / t, specialRate: p.special / t, blockRate: p.block / t, jumpRate: p.jump / t, matches: p.matches };
+}
+
+function finalizePatterns(fighterId) {
+  const p = getPatternProfile(fighterId);
+  p.matches++;
+  savePatterns();
+  const t = Math.max(1, p.total);
+  return { punchRate: p.punch / t, kickRate: p.kick / t, specialRate: p.special / t, blockRate: p.block / t, jumpRate: p.jump / t, avgCombo: patternData.comboCount > 0 ? patternData.comboHits / patternData.comboCount : 0 };
+}
+
+// Reset per-match pattern accumulators
+function resetMatchPatterns() {
+  patternData = { punch: 0, kick: 0, special: 0, block: 0, jump: 0, total: 0, comboHits: 0, comboCount: 0 };
+}
+
+// ====================== FIGHTER DNA SHARE CODES ======================
+let importedOpponent = null; // Temporarily holds imported DNA for next fight
+
+function encodeDNA(fighterId) {
+  const evo = getEvo(fighterId);
+  const obj = {
+    v: 1, id: fighterId, l: evo.level,
+    d: { a: +evo.dna.aggro.toFixed(2), d: +evo.dna.defense.toFixed(2), s: +evo.dna.speed.toFixed(2), c: +evo.dna.combo.toFixed(2), sp: +evo.dna.spacing.toFixed(2) },
+    p: evo.personality, t: evo.traits, w: evo.wins, m: evo.matchesPlayed
+  };
+  return btoa(JSON.stringify(obj));
+}
+
+function decodeDNA(code) {
+  try {
+    const obj = JSON.parse(atob(code.trim()));
+    if (!obj.v || !obj.id || obj.l === undefined) return null;
+    return {
+      id: obj.id, level: obj.l,
+      dna: { aggro: obj.d.a || 0, defense: obj.d.d || 0, speed: obj.d.s || 0, combo: obj.d.c || 0, spacing: obj.d.sp || 0 },
+      personality: obj.p || 'balanced', traits: obj.t || [], wins: obj.w || 0, matchesPlayed: obj.m || 0
+    };
+  } catch(e) { return null; }
+}
+
+function importDNA(code) {
+  const decoded = decodeDNA(code);
+  if (!decoded) { showToast('Invalid DNA code!', '#ff4444'); return false; }
+  // Find the fighter
+  const fighter = FIGHTERS.find(f => f.id === decoded.id);
+  if (!fighter) { showToast('Fighter not found in this mode!', '#ff4444'); return false; }
+  // Store as imported opponent — will be used in next fight
+  importedOpponent = { fighter, evo: decoded };
+  // Temporarily write evo data
+  const evo = getEvo(decoded.id);
+  Object.assign(evo, { level: decoded.level, dna: decoded.dna, personality: decoded.personality, traits: decoded.traits, wins: decoded.wins, matchesPlayed: decoded.matchesPlayed });
+  saveEvo();
+  showToast(`Imported ${fighter.name} EVO ${decoded.level} (${decoded.personality})`, EVO_PERSONALITIES[decoded.personality]?.color || '#00ff9d');
+  return true;
+}
+
+function shareDNA() {
+  if (!selectedFighter) return;
+  const evo = getEvo(selectedFighter.id);
+  if (evo.level === 0) { showToast('Fighter needs EVO level 1+ to share!', '#ff8800'); return; }
+  if (evo.level >= 5 && !isHolder()) { showToast('Hold $TKCL to export EVO 5+ DNA!', '#ff8800'); showTokenGate(); return; }
+  const code = encodeDNA(selectedFighter.id);
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(code).then(() => showToast('DNA code copied to clipboard!', '#00ff9d'));
+  } else {
+    prompt('Copy this DNA code:', code);
+  }
+}
+
+function promptImportDNA() {
+  const code = prompt('Paste a fighter DNA code:');
+  if (code) {
+    if (importDNA(code)) {
+      // Force this fighter as opponent
+      enemyFighter = importedOpponent.fighter;
+      buildSelect();
+    }
+  }
+}
+
+// Toast notification system
+let toastTimer = 0, toastText = '', toastColor = '#00ff9d';
+function showToast(text, color) {
+  toastText = text; toastColor = color || '#00ff9d'; toastTimer = 180; // 3 seconds
+}
+function drawToast() {
+  if (toastTimer <= 0) return;
+  const alpha = Math.min(1, toastTimer / 30);
+  ctx.globalAlpha = alpha;
+  ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
+  const tw = ctx.measureText(toastText).width + 24;
+  const tx = W / 2, ty = H - 40;
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.beginPath(); ctx.roundRect(tx - tw / 2, ty - 14, tw, 28, 8); ctx.fill();
+  ctx.strokeStyle = toastColor + '66'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(tx - tw / 2, ty - 14, tw, 28, 8); ctx.stroke();
+  ctx.fillStyle = toastColor;
+  ctx.fillText(toastText, tx, ty + 4);
+  ctx.globalAlpha = 1;
+  toastTimer--;
+}
+
+// ====================== AI COMMENTARY ======================
+// Live fight announcer that reacts to events
+let commentary = { text: '', timer: 0, color: '#ffcc00', priority: 0 };
+const COMMENTARY_LINES = {
+  combo3: ['Nice combo!', 'Triple threat!', 'Stringing it together!', 'Combo city!'],
+  combo5: ['MASSIVE COMBO!', 'UNSTOPPABLE!', 'COMBO MACHINE!', 'WHAT A SEQUENCE!'],
+  combo8: ['LEGENDARY COMBO!!!', 'ABSOLUTELY INSANE!', 'HISTORY IS MADE!'],
+  lowHp: ['One hit from defeat!', 'Hanging by a thread!', 'Can they survive?!', 'On the ropes!'],
+  comeback: ['THE COMEBACK!', 'Against all odds!', 'Never count them out!', 'TURNAROUND!'],
+  perfect: ['FLAWLESS so far!', 'Not a scratch!', 'Untouchable!', 'Domination!'],
+  finisher: ['FINISH THEM!', 'This is it!', 'The moment of truth!'],
+  close: ['Dead even!', 'Could go either way!', 'Neck and neck!', 'Too close to call!'],
+  dominating: ['Total domination!', 'This is a clinic!', 'Mercy rule needed!'],
+  blockBreak: ['Breaking through!', 'Shield crumbled!', 'Can\'t block forever!'],
+  antiAir: ['Shot down!', 'Grounded!', 'Stay on the floor!'],
+  timeout: ['Running out of time!', 'Clock is ticking!', 'Beat the buzzer!'],
+  roundStart: ['Round {n}... FIGHT!', 'Here we go again!', 'Back for more!'],
+  evolved: ['This fighter has EVOLVED!', 'Adaptation complete!', 'A new form emerges!'],
+  arena: ['The machines are fighting!', 'AI vs AI!', 'Evolution in action!', 'Autonomous combat!'],
+  fatality: ['FATALITY!!!', 'ABSOLUTE DESTRUCTION!', 'ANNIHILATED!', 'ELIMINATED!'],
+  powerKO: ['Power move KO!', 'Special finish!', 'Devastating power!', 'POWER KILL!'],
+  powerUsed: ['Super power activated!', 'Unleashing power!', 'Here it comes!'],
+  ultimateUsed: ['ULTIMATE UNLEASHED!', 'FULL POWER!!!', 'THE ULTIMATE!!!', 'MAX POWER!!!'],
+  counterHit: ['COUNTERED!', 'Read like a book!', 'Perfect counter!', 'Reversal!'],
+  healUsed: ['Healing up!', 'Recovery time!', 'Health restored!'],
+  grabLand: ['Grabbed!', 'Can\'t block that!', 'Unblockable!'],
+  cloneOut: ['Clone deployed!', 'Two against one!', 'Shadow clone!'],
+  trapSet: ['Trap placed!', 'Watch your step!', 'Minefield!'],
+  meterSteal: ['Meter stolen!', 'Power drained!', 'Energy siphoned!'],
+  reflect: ['REFLECTED!', 'Right back at you!', 'Mirror force!'],
+};
+
+function addCommentary(category, priority, color) {
+  if (priority < commentary.priority && commentary.timer > 20) return; // Don't override high-priority
+  const lines = COMMENTARY_LINES[category];
+  if (!lines) return;
+  let text = lines[Math.floor(Math.random() * lines.length)];
+  text = text.replace('{n}', roundNum);
+  commentary = { text, timer: 80, color: color || '#ffcc00', priority };
+}
+
+// Commentary check — called each frame during FIGHT state
+function updateCommentary() {
+  if (commentary.timer > 0) commentary.timer--;
+  if (!p1 || !p2) return;
+
+  const p1Pct = p1.hp / p1.maxHp;
+  const p2Pct = p2.hp / p2.maxHp;
+
+  // Combo announcements
+  if (comboCount === 3 && comboTimer > 55) addCommentary('combo3', 2, '#ffcc00');
+  if (comboCount === 5 && comboTimer > 55) addCommentary('combo5', 3, '#ff8800');
+  if (comboCount === 8 && comboTimer > 55) addCommentary('combo8', 4, '#ff0000');
+
+  // Low HP drama
+  if ((p1Pct < 0.15 || p2Pct < 0.15) && Math.random() < 0.01) addCommentary('lowHp', 2, '#ff4444');
+
+  // Comeback — was losing badly, now close or ahead
+  if (p1Pct < 0.3 && p2Pct < p1Pct && Math.random() < 0.02) addCommentary('comeback', 3, '#00ff9d');
+  if (p2Pct < 0.3 && p1Pct < p2Pct && Math.random() < 0.02) addCommentary('comeback', 3, '#ff6b6b');
+
+  // Perfect — one side at full HP, other below half
+  if (p1Pct === 1 && p2Pct < 0.5 && Math.random() < 0.008) addCommentary('perfect', 2, '#00ff9d');
+  if (p2Pct === 1 && p1Pct < 0.5 && Math.random() < 0.008) addCommentary('perfect', 2, '#ff6b6b');
+
+  // Dead even
+  if (Math.abs(p1Pct - p2Pct) < 0.1 && p1Pct < 0.6 && Math.random() < 0.006) addCommentary('close', 1, '#ffffff');
+
+  // Domination
+  if ((p1Pct > 0.8 && p2Pct < 0.3) || (p2Pct > 0.8 && p1Pct < 0.3)) {
+    if (Math.random() < 0.005) addCommentary('dominating', 2, p1Pct > p2Pct ? '#00ff9d' : '#ff6b6b');
+  }
+
+  // Timer drama
+  if (matchTimer <= 10 && matchTimer > 0 && Math.random() < 0.02) addCommentary('timeout', 2, '#ffcc00');
+
+  // Finishable
+  if ((p1.state === 'finishable' || p2.state === 'finishable') && Math.random() < 0.03) addCommentary('finisher', 3, '#ff1493');
+}
+
+// ====================== AI WIN PROBABILITY ======================
+let winProb = 0.5; // 0 = P2 wins, 1 = P1 wins
+function updateWinProb() {
+  if (!p1 || !p2) return;
+  const hpFactor = (p1.hp / p1.maxHp) - (p2.hp / p2.maxHp); // -1 to +1
+  const roundFactor = (p1Rounds - p2Rounds) * 0.15;
+  const comboFactor = comboCount > 0 && comboTimer > 0 ? 0.05 * comboCount : 0;
+  const raw = 0.5 + hpFactor * 0.35 + roundFactor + comboFactor;
+  const target = Math.max(0.02, Math.min(0.98, raw));
+  winProb += (target - winProb) * 0.08; // Smooth interpolation
+}
+// ====================== $TKCL TOKEN GATE ======================
+const TKCL_MINT = 'PLACEHOLDER_TKCL_MINT_ADDRESS'; // Replace with actual SPL token mint
+let walletConnected = false, walletAddress = null, tkclBalance = 0;
+const TKCL_HOLDER_THRESHOLD = 1; // Minimum tokens to be considered a holder
+function isHolder() { return tkclBalance >= TKCL_HOLDER_THRESHOLD; }
+const EVO_FREE_CAP = 4; // Free tier caps at EVO level 4
+
+function showTokenGate() {
+  const modal = document.getElementById('token-gate-modal');
+  modal.style.display = 'flex';
+  updateWalletUI();
+}
+
+function closeTokenGate() {
+  document.getElementById('token-gate-modal').style.display = 'none';
+}
+
+function updateWalletUI() {
+  const statusEl = document.getElementById('wallet-status');
+  const btnEl = document.getElementById('connect-wallet-btn');
+  const labelEl = document.getElementById('wallet-label');
+  if (walletConnected) {
+    const short = walletAddress.slice(0, 4) + '...' + walletAddress.slice(-4);
+    statusEl.innerHTML = `<span style="color:#00ff9d">Connected:</span> ${short}<br><span style="color:#9d00ff">${tkclBalance.toLocaleString()} $TKCL</span>`;
+    btnEl.textContent = isHolder() ? 'UNLOCKED' : 'Need more $TKCL';
+    btnEl.disabled = true; btnEl.style.opacity = '0.6';
+    labelEl.textContent = short;
+    labelEl.style.color = isHolder() ? '#00ff9d' : '#ff8800';
+  } else {
+    statusEl.innerHTML = '<span style="color:#666">No wallet connected</span>';
+    btnEl.textContent = 'Connect Phantom Wallet';
+    btnEl.disabled = false; btnEl.style.opacity = '1';
+    labelEl.textContent = '$TKCL';
+  }
+}
+
+async function connectWallet() {
+  try {
+    // Check for Phantom
+    const provider = window.solana;
+    if (!provider || !provider.isPhantom) {
+      showToast('Phantom wallet not found! Install at phantom.app', '#ff4444');
+      window.open('https://phantom.app/', '_blank');
+      return;
+    }
+    const resp = await provider.connect();
+    walletAddress = resp.publicKey.toString();
+    walletConnected = true;
+
+    // Try to fetch $TKCL balance via Solana RPC
+    try {
+      const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+      const pubkey = new solanaWeb3.PublicKey(walletAddress);
+      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(pubkey, { programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') });
+      const tkclAccount = tokenAccounts.value.find(a => a.account.data.parsed.info.mint === TKCL_MINT);
+      tkclBalance = tkclAccount ? parseFloat(tkclAccount.account.data.parsed.info.tokenAmount.uiAmount) : 0;
+    } catch(e) {
+      // RPC might fail — still count as connected
+      tkclBalance = 0;
+    }
+
+    localStorage.setItem('clash_wallet', walletAddress);
+    updateWalletUI();
+    if (isHolder()) {
+      showToast('Wallet connected! Full evolution unlocked!', '#00ff9d');
+      closeTokenGate();
+    } else {
+      showToast('Wallet connected! Hold $TKCL to unlock full evolution.', '#ff8800');
+    }
+  } catch(e) {
+    showToast('Wallet connection cancelled', '#ff8800');
+  }
+}
+
+// Auto-reconnect on page load
+(function autoReconnectWallet() {
+  const saved = localStorage.getItem('clash_wallet');
+  if (saved && window.solana?.isPhantom) {
+    window.solana.connect({ onlyIfTrusted: true }).then(resp => {
+      walletAddress = resp.publicKey.toString();
+      walletConnected = true;
+      updateWalletUI();
+    }).catch(() => {});
+  }
+})();
+
+// ====================== EVOLVED FIGHTER NFT MINT ======================
+// Mint your evolved fighter as a compressed NFT on Solana
+async function mintFighterNFT() {
+  if (!selectedFighter) return;
+  const evo = getEvo(selectedFighter.id);
+  if (evo.level === 0) { showToast('Fighter needs EVO level 1+ to mint!', '#ff8800'); return; }
+  if (!walletConnected) { showToast('Connect wallet first!', '#ff8800'); showTokenGate(); return; }
+  if (!isHolder()) { showToast('Hold $TKCL to mint NFTs!', '#ff8800'); showTokenGate(); return; }
+
+  // Build NFT metadata
+  const dnaCode = encodeDNA(selectedFighter.id);
+  const pers = EVO_PERSONALITIES[evo.personality] || EVO_PERSONALITIES.balanced;
+  const metadata = {
+    name: `${selectedFighter.name} EVO ${evo.level}`,
+    symbol: 'CLASH',
+    description: `Evolved ${selectedFighter.name} (${pers.name}) — Level ${evo.level} fighter from TinkClaw Clash. ${evo.traits.length ? 'Traits: ' + evo.traits.map(t => EVO_TRAITS.find(et => et.id === t)?.name).filter(Boolean).join(', ') : 'No special traits yet.'}`,
+    attributes: [
+      { trait_type: 'Fighter', value: selectedFighter.name },
+      { trait_type: 'EVO Level', value: evo.level },
+      { trait_type: 'Personality', value: pers.name },
+      { trait_type: 'Aggression', value: +(evo.dna.aggro * 100).toFixed(0) },
+      { trait_type: 'Defense', value: +(evo.dna.defense * 100).toFixed(0) },
+      { trait_type: 'Speed', value: +(evo.dna.speed * 100).toFixed(0) },
+      { trait_type: 'Combo', value: +(evo.dna.combo * 100).toFixed(0) },
+      { trait_type: 'Spacing', value: +(evo.dna.spacing * 100).toFixed(0) },
+      { trait_type: 'Matches', value: evo.matchesPlayed },
+      { trait_type: 'Wins', value: evo.wins },
+      { trait_type: 'Win Rate', value: evo.matchesPlayed > 0 ? Math.round(evo.wins / evo.matchesPlayed * 100) + '%' : '0%' },
+      { trait_type: 'DNA Code', value: dnaCode.slice(0, 32) + '...' },
+      ...(evo.traits.map(t => ({ trait_type: 'Trait', value: EVO_TRAITS.find(et => et.id === t)?.name || t })))
+    ],
+    properties: { category: 'game', dna: dnaCode },
+  };
+
+  // For now: copy metadata + show coming soon
+  // When Metaplex cNFT integration is ready, this will call the actual mint
+  try {
+    const metaStr = JSON.stringify(metadata, null, 2);
+    if (navigator.clipboard) await navigator.clipboard.writeText(metaStr);
+    showToast('NFT metadata copied! On-chain minting coming soon.', '#ffd700');
+    // Log mint intent for analytics
+    try {
+      fetch(window.location.origin + '/api/clash/mint-intent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: walletAddress, fighter: selectedFighter.id, level: evo.level, personality: evo.personality })
+      }).catch(() => {});
+    } catch(e) {}
+  } catch(e) {
+    showToast('Mint coming soon! Stay tuned.', '#ffd700');
+  }
+}
+
+// ====================== $TKCL STAKED TOURNAMENT ======================
+let stakedTournament = false;
+let stakeAmount = 0;
+const STAKE_TIERS = [
+  { label: 'Free', amount: 0, reward: 0, color: '#888' },
+  { label: '100 $TKCL', amount: 100, reward: 500, color: '#00ff9d' },
+  { label: '500 $TKCL', amount: 500, reward: 3000, color: '#ffd700' },
+  { label: '1000 $TKCL', amount: 1000, reward: 8000, color: '#ff1493' },
+];
+
+function showStakeModal() {
+  if (!walletConnected) { showToast('Connect wallet to stake!', '#ff8800'); showTokenGate(); return; }
+  const modal = document.createElement('div');
+  modal.id = 'stake-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9998;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `<div style="background:#111;border:2px solid #ffd700;border-radius:16px;padding:24px;max-width:380px;text-align:center;color:#fff;font-family:Arial">
+    <h2 style="color:#ffd700;margin:0 0 12px">STAKED TOURNAMENT</h2>
+    <div style="color:#aaa;font-size:0.8em;margin-bottom:16px">Stake $TKCL for bigger rewards. Champion wins the prize pool.<br>Your balance: <span style="color:#9d00ff">${tkclBalance.toLocaleString()} $TKCL</span></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${STAKE_TIERS.map((t, i) => `<button onclick="selectStake(${i})" style="padding:10px;background:#1a1a2e;border:1px solid ${t.color};border-radius:8px;color:${t.color};cursor:pointer;font-weight:bold;font-size:0.85em${t.amount > tkclBalance ? ';opacity:0.4;pointer-events:none' : ''}">${t.label}${t.reward ? ` → Win ${t.reward.toLocaleString()} $TKCL` : ' (No reward)'}</button>`).join('')}
+    </div>
+    <button onclick="document.getElementById('stake-modal').remove()" style="margin-top:12px;padding:6px 16px;background:transparent;color:#666;border:1px solid #333;border-radius:6px;cursor:pointer">Cancel</button>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+function selectStake(tierIdx) {
+  const tier = STAKE_TIERS[tierIdx];
+  stakeAmount = tier.amount;
+  stakedTournament = tier.amount > 0;
+  document.getElementById('stake-modal')?.remove();
+  if (stakedTournament) {
+    showToast(`Tournament staked: ${tier.label}! Win ${tier.reward.toLocaleString()} $TKCL`, tier.color);
+    // In production: create Solana transaction to escrow $TKCL
+    // For now: track locally
+    localStorage.setItem('clash_stake', JSON.stringify({ amount: tier.amount, reward: tier.reward, ts: Date.now() }));
+  }
+  // Start the tournament
+  document.getElementById('select-overlay').classList.add('hidden');
+  startTournament();
+}
+
+// ====================== veTKCL GOVERNANCE ======================
+// Token holders vote on new fighters, balance patches, game modes
+const GOVERNANCE_PROPOSALS = [
+  { id: 'new_fighter_mog', title: 'Add MOG Fighter', desc: 'New meme coin fighter: $MOG — speedy trickster style', votes: { yes: 0, no: 0 }, status: 'active' },
+  { id: 'nerf_sandwich', title: 'Nerf Sandwich Teleport', desc: 'Reduce Sandwich Attack range from 200 to 150', votes: { yes: 0, no: 0 }, status: 'active' },
+  { id: 'night_stage', title: 'Add Neon Night Stage', desc: 'New stage with neon reflections and rain particles', votes: { yes: 0, no: 0 }, status: 'active' },
+];
+
+function loadVotes() {
+  try { return JSON.parse(localStorage.getItem('clash_votes') || '{}'); } catch(e) { return {}; }
+}
+function saveVotes(v) { localStorage.setItem('clash_votes', JSON.stringify(v)); }
+
+function showGovernance() {
+  if (!walletConnected || !isHolder()) { showToast('Hold $TKCL to vote!', '#ff8800'); showTokenGate(); return; }
+  const myVotes = loadVotes();
+  const modal = document.createElement('div');
+  modal.id = 'gov-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9998;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `<div style="background:#111;border:2px solid #9d00ff;border-radius:16px;padding:24px;max-width:420px;text-align:center;color:#fff;font-family:Arial;max-height:80vh;overflow-y:auto">
+    <h2 style="color:#9d00ff;margin:0 0 4px">GOVERNANCE</h2>
+    <div style="color:#666;font-size:0.75em;margin-bottom:16px">veTKCL holders shape the game</div>
+    ${GOVERNANCE_PROPOSALS.filter(p => p.status === 'active').map(p => {
+      const voted = myVotes[p.id];
+      const total = p.votes.yes + p.votes.no;
+      const pct = total > 0 ? Math.round(p.votes.yes / total * 100) : 50;
+      return `<div style="background:#1a1a2e;border:1px solid #333;border-radius:10px;padding:12px;margin-bottom:10px;text-align:left">
+        <div style="font-weight:bold;color:#fff;font-size:0.9em">${p.title}</div>
+        <div style="color:#888;font-size:0.75em;margin:4px 0 8px">${p.desc}</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button onclick="castVote('${p.id}','yes')" style="flex:1;padding:6px;background:${voted==='yes'?'#00ff9d33':'#1a1a2e'};border:1px solid #00ff9d44;border-radius:6px;color:#00ff9d;cursor:pointer;font-size:0.8em;font-weight:bold">YES ${pct}%</button>
+          <button onclick="castVote('${p.id}','no')" style="flex:1;padding:6px;background:${voted==='no'?'#ff444433':'#1a1a2e'};border:1px solid #ff444444;border-radius:6px;color:#ff4444;cursor:pointer;font-size:0.8em;font-weight:bold">NO ${100-pct}%</button>
+        </div>
+        ${voted ? `<div style="text-align:center;color:#666;font-size:0.7em;margin-top:4px">You voted: ${voted.toUpperCase()}</div>` : ''}
+      </div>`;
+    }).join('')}
+    <button onclick="document.getElementById('gov-modal').remove()" style="padding:8px 20px;background:transparent;color:#666;border:1px solid #333;border-radius:8px;cursor:pointer;font-size:0.85em">Close</button>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+function castVote(proposalId, vote) {
+  const myVotes = loadVotes();
+  if (myVotes[proposalId]) { showToast('Already voted on this proposal!', '#ff8800'); return; }
+  myVotes[proposalId] = vote;
+  saveVotes(myVotes);
+  const p = GOVERNANCE_PROPOSALS.find(pr => pr.id === proposalId);
+  if (p) p.votes[vote]++;
+  // Submit vote to server
+  try {
+    fetch(window.location.origin + '/api/clash/vote', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet: walletAddress, proposal: proposalId, vote })
+    }).catch(() => {});
+  } catch(e) {}
+  showToast(`Voted ${vote.toUpperCase()} on "${p?.title}"!`, vote === 'yes' ? '#00ff9d' : '#ff4444');
+  document.getElementById('gov-modal')?.remove();
+  showGovernance(); // Refresh
+}
+
+// ====================== SIGNAL MARKET CROSS-POLLINATION ======================
+// Bot Clash fighters link to real trading bots on Signal Market
+const BOT_SIGNAL_MAP = {
+  snipebot: { name: 'SnipeBot Alpha', desc: 'Momentum entry sniper — catches breakouts', market_url: '/signal-market?bot=sniper' },
+  gridbot: { name: 'GridBot Pro', desc: 'Range-bound grid trader — profits in chop', market_url: '/signal-market?bot=grid' },
+  liquidator: { name: 'Liquidator X', desc: 'Detects overleveraged positions — hunts liquidations', market_url: '/signal-market?bot=liquidator' },
+  sandwich: { name: 'MEV Finder', desc: 'Front-running detector — extracts value', market_url: '/signal-market?bot=mev' },
+  arbbot: { name: 'Arb Scanner', desc: 'Cross-exchange arbitrage finder', market_url: '/signal-market?bot=arb' },
+  flashbot: { name: 'Flash Executor', desc: 'Flash loan opportunity finder', market_url: '/signal-market?bot=flash' },
+  whalebot: { name: 'Whale Tracker', desc: 'Follows whale wallet movements', market_url: '/signal-market?bot=whale' },
+  dcabot: { name: 'DCA Engine', desc: 'Smart dollar-cost-averaging scheduler', market_url: '/signal-market?bot=dca' },
+  tinkclaw: { name: 'TinkClaw Signal Engine', desc: 'Full AI signal suite — the brain behind it all', market_url: '/signal-market' },
+};
+
+function showBotSignalLink(fighterId) {
+  const bot = BOT_SIGNAL_MAP[fighterId];
+  if (!bot) return;
+  showToast(`${bot.name}: ${bot.desc}`, '#00ffff');
+}
+
+function tryBotSignals(fighterId) {
+  const bot = BOT_SIGNAL_MAP[fighterId];
+  if (!bot) { showToast('No signal bot linked to this fighter', '#888'); return; }
+  if (!walletConnected || !isHolder()) {
+    showToast('Hold $TKCL to unlock bot signal trials!', '#ff8800');
+    showTokenGate(); return;
+  }
+  // Navigate to signal market with bot pre-selected
+  window.open(window.location.origin + bot.market_url, '_blank');
+  showToast(`Opening ${bot.name} on Signal Market...`, '#00ffff');
+}
+
 function shareResults() {
   const p1Won = p1Rounds >= 2;
   const fighter = selectedFighter.name;
@@ -3417,9 +5095,11 @@ function shareResults() {
   window.open(url, '_blank', 'width=550,height=420');
 }
 function resetStats() {
-  if (!confirm('Reset all career stats?')) return;
+  if (!confirm('Reset all career stats and evolution data?')) return;
   Object.assign(career, defaultCareer());
   saveCareer();
+  evoData = defaultEvo(); saveEvo();
+  savedPatterns = {}; savePatterns();
   updateCareerBanner();
   buildSelect();
 }
@@ -3509,7 +5189,8 @@ function buildSelect() {
     }
     const locked = f.boss && !bossOpen && !crossRoster; // Bosses unlocked in cross-mode 2P
     const card = document.createElement('div');
-    card.className = 'roster-card' + (f.boss ? ' boss' : '') + (selectedFighter?.id === f.id ? ' sel' : '') + (locked ? ' locked' : '');
+    const isArenaSel = gameMode === 'arena' && (arenaFighter1?.id === f.id || arenaFighter2?.id === f.id);
+    card.className = 'roster-card' + (f.boss ? ' boss' : '') + ((selectedFighter?.id === f.id || isArenaSel) ? ' sel' : '') + (locked ? ' locked' : '');
     card.onclick = locked ? null : () => selectFighter(f);
     const cvs = document.createElement('canvas');
     cvs.width = 70; cvs.height = 70;
@@ -3528,6 +5209,17 @@ function buildSelect() {
       recDiv.className = 'r-record';
       recDiv.textContent = `${rec.w}W - ${rec.l}L`;
       card.appendChild(recDiv);
+    }
+
+    // EVO badge
+    const evo = getEvo(f.id);
+    if (evo.level > 0) {
+      const pers = EVO_PERSONALITIES[evo.personality] || EVO_PERSONALITIES.balanced;
+      const evoBadge = document.createElement('div');
+      evoBadge.className = 'evo-badge';
+      evoBadge.style.cssText = `font-size:8px;color:${pers.color};text-align:center;margin-top:1px;font-weight:bold;text-shadow:0 0 6px ${pers.color}44`;
+      evoBadge.textContent = `${pers.icon} EVO ${evo.level}`;
+      card.appendChild(evoBadge);
     }
 
     // Stat bars
@@ -3553,6 +5245,23 @@ function buildSelect() {
 }
 
 function selectFighter(f) {
+  // Arena mode: pick two fighters
+  if (gameMode === 'arena') {
+    if (!arenaFighter1) {
+      arenaFighter1 = f; selectedFighter = f;
+    } else if (arenaFighter1.id !== f.id && !arenaFighter2) {
+      arenaFighter2 = f; enemyFighter = f;
+    } else if (arenaFighter1.id === f.id) {
+      // Deselect fighter 1
+      arenaFighter1 = arenaFighter2; arenaFighter2 = null;
+      selectedFighter = arenaFighter1; enemyFighter = null;
+    } else {
+      arenaFighter2 = f; enemyFighter = f;
+    }
+    buildSelect(); playSound('select', 0.2);
+    updateArenaPreview();
+    return;
+  }
   // In 2P mode: first click = P1, second click = P2
   if (gameMode === '2p' && selectedFighter && selectedFighter.id !== f.id && !p2SelectedFighter) {
     p2SelectedFighter = f;
@@ -3609,11 +5318,38 @@ function selectFighter(f) {
   drawFighterBody(pc1.getContext('2d'), 60, 105, selectedFighter.w, selectedFighter.h, selectedFighter, 'idle', 0, 1, 0, 0, false, false);
   if (enemyFighter) drawFighterBody(pc2.getContext('2d'), 60, 105, enemyFighter.w, enemyFighter.h, enemyFighter, 'idle', 0, -1, 0, 0, false, false);
 
+  // Build moves + evo info
+  const selEvo = getEvo(selectedFighter.id);
+  const selPers = EVO_PERSONALITIES[selEvo.personality] || EVO_PERSONALITIES.balanced;
+  const evoInfo = selEvo.level > 0 ? `<div class="move-tag" style="background:${selPers.color}22;border-color:${selPers.color}44;color:${selPers.color}">
+    ${selPers.icon} EVO ${selEvo.level} — ${selPers.name}${selEvo.traits.length ? ' · ' + selEvo.traits.map(t => EVO_TRAITS.find(et => et.id === t)?.name).filter(Boolean).join(', ') : ''}
+  </div>` : '';
+  // Enemy evo warning
+  let enemyEvoInfo = '';
+  if (enemyFighter && (gameMode === '1p' || gameMode === 'tournament')) {
+    const eEvo = getEvo(enemyFighter.id);
+    const ePers = EVO_PERSONALITIES[eEvo.personality] || EVO_PERSONALITIES.balanced;
+    if (eEvo.level > 0) {
+      enemyEvoInfo = `<div class="move-tag" style="background:#ff444422;border-color:#ff444444;color:#ff6b6b;font-size:0.75em">
+        ⚠ Opponent: ${ePers.icon} EVO ${eEvo.level} ${ePers.name}${eEvo.level >= 5 ? ' — ADAPTED TO YOUR STYLE' : ''}
+      </div>`;
+    }
+  }
   document.getElementById('moves-preview').innerHTML = `
     <div class="move-tag"><span class="key">J</span> ${selectedFighter.moves.punch.name} <span class="dmg">${selectedFighter.moves.punch.dmg}dmg</span></div>
     <div class="move-tag"><span class="key">K</span> ${selectedFighter.moves.kick.name} <span class="dmg">${selectedFighter.moves.kick.dmg}dmg</span></div>
     <div class="move-tag"><span class="key">L</span> ${selectedFighter.moves.special.name} <span class="dmg">${selectedFighter.moves.special.dmg}dmg</span></div>
     <div class="move-tag"><span class="key">J+K</span> ${selectedFighter.moves.finisher.name} <span class="dmg">${selectedFighter.moves.finisher.dmg}dmg</span></div>
+    ${selectedFighter.powers ? `
+    <div class="move-tag" style="border-color:${selectedFighter.powers.power1.color}33"><span class="key">S+L</span> ${selectedFighter.powers.power1.name} <span class="dmg">${selectedFighter.powers.power1.dmg || '—'}</span></div>
+    <div class="move-tag" style="border-color:${selectedFighter.powers.power2.color}33"><span class="key">F+L</span> ${selectedFighter.powers.power2.name} <span class="dmg">${selectedFighter.powers.power2.dmg || '—'}</span></div>
+    <div class="move-tag" style="border-color:${selectedFighter.powers.power3.color}33"><span class="key">B+L</span> ${selectedFighter.powers.power3.name} <span class="dmg">${selectedFighter.powers.power3.dmg || '—'}</span></div>
+    <div class="move-tag" style="border-color:#ff149355;background:linear-gradient(135deg,#9d00ff11,#ff149311)"><span class="key">J+K+L</span> ${selectedFighter.powers.ultimate.name} <span class="dmg">${selectedFighter.powers.ultimate.dmg}dmg</span></div>
+    ` : ''}
+    ${evoInfo}${enemyEvoInfo}
+    ${BOT_SIGNAL_MAP[selectedFighter.id] ? `<div class="move-tag" style="background:#00ffff11;border-color:#00ffff33;color:#00ffff;cursor:pointer;font-size:0.75em" onclick="tryBotSignals('${selectedFighter.id}')">
+      ⚡ Real Bot: ${BOT_SIGNAL_MAP[selectedFighter.id].name} — Try on Signal Market
+    </div>` : ''}
   `;
   const btn = document.getElementById('fight-btn');
   if (gameMode === 'online') {
@@ -3629,7 +5365,75 @@ function selectFighter(f) {
   }
 }
 
+// ====================== AI ARENA ======================
+function updateArenaPreview() {
+  const preview = document.getElementById('fighter-preview');
+  const movesEl = document.getElementById('moves-preview');
+  preview.innerHTML = '';
+
+  if (arenaFighter1) {
+    const pb1 = document.createElement('div'); pb1.className = 'preview-box';
+    const pc1 = document.createElement('canvas'); pc1.width = 120; pc1.height = 120; pb1.appendChild(pc1);
+    const pn1 = document.createElement('div'); pn1.className = 'p-name'; pn1.style.color = arenaFighter1.color; pn1.textContent = arenaFighter1.name; pb1.appendChild(pn1);
+    const e1 = getEvo(arenaFighter1.id); const p1p = EVO_PERSONALITIES[e1.personality] || EVO_PERSONALITIES.balanced;
+    if (e1.level > 0) { const ev = document.createElement('div'); ev.style.cssText = `font-size:8px;color:${p1p.color};font-weight:bold`; ev.textContent = `${p1p.icon} EVO ${e1.level} ${p1p.name}`; pb1.appendChild(ev); }
+    preview.appendChild(pb1);
+    drawFighterBody(pc1.getContext('2d'), 60, 105, arenaFighter1.w, arenaFighter1.h, arenaFighter1, 'idle', 0, 1, 0, 0, false, false);
+  }
+
+  const vs = document.createElement('div'); vs.className = 'preview-vs'; vs.textContent = 'VS'; preview.appendChild(vs);
+
+  if (arenaFighter2) {
+    const pb2 = document.createElement('div'); pb2.className = 'preview-box';
+    const pc2 = document.createElement('canvas'); pc2.width = 120; pc2.height = 120; pb2.appendChild(pc2);
+    const pn2 = document.createElement('div'); pn2.className = 'p-name'; pn2.style.color = arenaFighter2.color; pn2.textContent = arenaFighter2.name; pb2.appendChild(pn2);
+    const e2 = getEvo(arenaFighter2.id); const p2p = EVO_PERSONALITIES[e2.personality] || EVO_PERSONALITIES.balanced;
+    if (e2.level > 0) { const ev = document.createElement('div'); ev.style.cssText = `font-size:8px;color:${p2p.color};font-weight:bold`; ev.textContent = `${p2p.icon} EVO ${e2.level} ${p2p.name}`; pb2.appendChild(ev); }
+    preview.appendChild(pb2);
+    drawFighterBody(pc2.getContext('2d'), 60, 105, arenaFighter2.w, arenaFighter2.h, arenaFighter2, 'idle', 0, -1, 0, 0, false, false);
+  } else {
+    const pb2 = document.createElement('div'); pb2.className = 'preview-box';
+    const pn2 = document.createElement('div'); pn2.className = 'p-name'; pn2.style.color = '#555'; pn2.textContent = 'Pick opponent...'; pb2.appendChild(pn2); preview.appendChild(pb2);
+  }
+
+  // Prediction UI
+  if (arenaFighter1 && arenaFighter2) {
+    const btn = document.getElementById('fight-btn');
+    btn.disabled = !arenaPrediction;
+    btn.textContent = arenaPrediction ? `FIGHT! (${arenaPrediction === 'p1' ? arenaFighter1.name : arenaFighter2.name} wins - 25pts)` : 'PREDICT A WINNER FIRST';
+    movesEl.innerHTML = `
+      <div style="text-align:center;color:#aaa;font-size:0.8em;margin-bottom:6px">Who will win? (${arenaPoints} pts)</div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button class="mode-btn ${arenaPrediction === 'p1' ? 'active' : ''}" onclick="arenaPrediction='p1';updateArenaPreview()" style="color:${arenaFighter1.color};border-color:${arenaFighter1.color}44">${arenaFighter1.name}</button>
+        <button class="mode-btn ${arenaPrediction === 'p2' ? 'active' : ''}" onclick="arenaPrediction='p2';updateArenaPreview()" style="color:${arenaFighter2.color};border-color:${arenaFighter2.color}44">${arenaFighter2.name}</button>
+      </div>
+      <div style="text-align:center;color:#666;font-size:0.7em;margin-top:4px">Correct: +25pts | Wrong: -10pts</div>
+    `;
+  } else {
+    movesEl.innerHTML = `<div style="color:#9d00ff;text-align:center;font-size:0.8em">Pick two evolved fighters to watch them battle.<br>Arena Points: ${arenaPoints}</div>`;
+    document.getElementById('fight-btn').disabled = true;
+    document.getElementById('fight-btn').textContent = arenaFighter1 ? 'PICK OPPONENT' : 'PICK 2 FIGHTERS';
+  }
+}
+
+function startArenaFight() {
+  selectedFighter = arenaFighter1;
+  enemyFighter = arenaFighter2;
+  document.getElementById('select-overlay').classList.add('hidden');
+  roundNum = 1; p1Rounds = 0; p2Rounds = 0;
+  startRound();
+  // Override: both fighters are AI
+  p1.isAI = true; p2.isAI = true;
+  // Set evo refs for both
+  p1.evoRef = getEvo(arenaFighter1.id);
+  p2.evoRef = getEvo(arenaFighter2.id);
+}
+
 function startFight() {
+  if (gameMode === 'arena') {
+    if (!arenaFighter1 || !arenaFighter2 || !arenaPrediction) return;
+    startArenaFight(); return;
+  }
   if (!selectedFighter) return;
   // Prompt for name on first game if not set
   if (!playerName && (gameMode === '1p' || gameMode === 'tournament' || gameMode === 'online')) promptForName();
@@ -3952,12 +5756,131 @@ function sendOnlineInputs() {
   onlineWs.send(JSON.stringify({ type: 'input', keys: inputKeys }));
 }
 
-// Check for ?join= param on load
+// ====================== X CHALLENGE SYSTEM ======================
+let myXHandle = localStorage.getItem('clash_x_handle') || '';
+let challengeFrom = ''; // X handle of challenger (from deep link)
+
+// Load saved X handle into input
+(function initXHandle() {
+  setTimeout(() => {
+    const el = document.getElementById('my-x-handle');
+    if (el && myXHandle) el.value = myXHandle;
+    if (el) el.addEventListener('change', () => {
+      myXHandle = el.value.trim().replace(/^@/, '');
+      if (myXHandle) {
+        localStorage.setItem('clash_x_handle', myXHandle);
+        el.value = '@' + myXHandle;
+      }
+    });
+  }, 100);
+})();
+
+function challengeViaX() {
+  if (!playerName) { promptForName(); return; }
+  const theirHandle = document.getElementById('x-handle-input').value.trim().replace(/^@/, '');
+  if (!theirHandle) {
+    document.getElementById('online-status').textContent = 'Enter their X handle first';
+    return;
+  }
+  // Save our handle
+  const myEl = document.getElementById('my-x-handle');
+  if (myEl && myEl.value.trim()) {
+    myXHandle = myEl.value.trim().replace(/^@/, '');
+    localStorage.setItem('clash_x_handle', myXHandle);
+  }
+  // Create room with challenge metadata
+  if (onlineWs) { onlineWs.close(); onlineWs = null; }
+  document.getElementById('online-status').textContent = 'Creating challenge room...';
+  try {
+    onlineWs = new WebSocket(WS_URL);
+  } catch(e) {
+    document.getElementById('online-status').textContent = 'Connection failed';
+    return;
+  }
+  onlineWs.onopen = () => {
+    onlineWs.send(JSON.stringify({
+      type: 'challenge',
+      from_x: myXHandle || playerName,
+      to_x: theirHandle,
+      fighter: selectedFighter ? selectedFighter.id : ''
+    }));
+  };
+  onlineWs.onmessage = (e) => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    if (msg.type === 'created' && msg.challenge) {
+      onlineSlot = msg.slot;
+      onlineRoom = msg.code;
+      document.getElementById('online-create-section').style.display = 'none';
+      document.getElementById('online-room-section').style.display = 'block';
+      document.getElementById('room-code-display').textContent = msg.code;
+      document.getElementById('online-status').textContent = 'Challenge room ready! Send to @' + theirHandle + ':';
+      // Auto-open X intent with challenge
+      const challengeUrl = `${location.origin}${location.pathname}?c=${msg.code}&from=${encodeURIComponent(myXHandle || playerName)}`;
+      const tweetText = `@${theirHandle} I challenge you to TinkClaw Clash! ⚔️\n\nAccept here: ${challengeUrl}\n\n#TinkClawClash`;
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank', 'width=550,height=420');
+      // Continue handling messages normally
+      onlineWs.onmessage = (e2) => {
+        let m; try { m = JSON.parse(e2.data); } catch { return; }
+        handleOnlineMsg(m);
+      };
+    } else if (msg.type === 'error') {
+      document.getElementById('online-status').textContent = msg.msg || 'Error';
+    }
+  };
+  onlineWs.onclose = () => {
+    if (gameMode === 'online') document.getElementById('online-status').textContent = 'Disconnected';
+  };
+  onlineWs.onerror = () => {
+    document.getElementById('online-status').textContent = 'Connection error';
+  };
+}
+
+function shareXChallenge() {
+  // Share existing room as X challenge
+  if (!onlineRoom) return;
+  const myEl = document.getElementById('my-x-handle');
+  if (myEl && myEl.value.trim()) {
+    myXHandle = myEl.value.trim().replace(/^@/, '');
+    localStorage.setItem('clash_x_handle', myXHandle);
+  }
+  const challengeUrl = `${location.origin}${location.pathname}?c=${onlineRoom}&from=${encodeURIComponent(myXHandle || playerName)}`;
+  const tweetText = `I challenge YOU to TinkClaw Clash! ⚔️\n\nAccept here: ${challengeUrl}\n\n#TinkClawClash`;
+  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank', 'width=550,height=420');
+}
+
+function postVictoryChallenge() {
+  // After winning online, challenge someone new via X
+  const winner = p1Rounds >= 2 ? selectedFighter : enemyFighter;
+  const winnerName = winner ? winner.name : 'fighter';
+  const evo = winner ? getEvo(winner.id) : null;
+  const evoText = evo && evo.level > 0 ? ` (EVO ${evo.level})` : '';
+  const tweetText = `Just won with ${winnerName}${evoText} in TinkClaw Clash! ⚔️\n\nWho's next? Challenge me!\n\n${location.origin}${location.pathname}\n\n#TinkClawClash`;
+  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank', 'width=550,height=420');
+}
+
+// Check for ?join= or ?c= (challenge) param on load
 (function checkJoinParam() {
   const params = new URLSearchParams(location.search);
   const joinCode = params.get('join');
-  if (joinCode) {
-    // Auto-switch to online mode and join
+  const challengeCode = params.get('c');
+  const fromHandle = params.get('from') || '';
+
+  if (challengeCode) {
+    // X challenge deep link
+    challengeFrom = decodeURIComponent(fromHandle);
+    setTimeout(() => {
+      setMode('online');
+      document.getElementById('join-code-input').value = challengeCode.toUpperCase();
+      document.getElementById('online-status').innerHTML = challengeFrom
+        ? 'Challenge from <span style="color:#1da1f2">@' + challengeFrom + '</span> — joining...'
+        : 'Joining challenge room...';
+      if (playerName) {
+        onlineJoin();
+      }
+    }, 500);
+  } else if (joinCode) {
+    // Regular invite link
     setTimeout(() => {
       setMode('online');
       document.getElementById('join-code-input').value = joinCode.toUpperCase();
@@ -4032,6 +5955,28 @@ function doTaunt(fighter, px, py) {
   setTimeout(() => canTaunt = true, 3000); // 3s cooldown
   playSound('select', 0.2);
 }
+
+// ====================== FATALITY LINES ======================
+const FATALITY_LINES = {
+  doge: ['SUCH DESTRUCTION!', 'MUCH FATALITY!', 'WOW. DELETED.'],
+  pepe: ['ULTRA REKT!', 'RARE KILL!', 'PEPE\'D!'],
+  shib: ['INCINERATED!', 'BURNED TO ASH!', 'SHIB SCORCHED!'],
+  bonk: ['MEGA BONK!!!', 'BONKED TO OBLIVION!', 'SKULL CRUSHED!'],
+  wif: ['HAT TRICK KILL!', 'BRIM BREAKER!', 'FASHIONABLY DESTROYED!'],
+  floki: ['VALHALLA AWAITS!', 'VIKING EXECUTION!', 'ODIN\'S FURY!'],
+  trump: ['YOU\'RE FIRED!', 'TREMENDOUS DESTRUCTION!', 'BIGLY DEFEATED!'],
+  samo: ['GOOD BOY KILLS!', 'SOL SHATTERED!', 'SAMOYED SUPREMACY!'],
+  tinkclaw: ['SYSTEM TERMINATED!', 'NEURAL ANNIHILATION!', 'CHAIN BROKEN!'],
+  snipebot: ['HEADSHOT!', 'ONE SHOT. ONE KILL.', 'SCOPE: CONFIRMED!'],
+  gridbot: ['GRID CRUSHED!', 'RANGE EXCEEDED!', 'SYSTEMATICALLY DESTROYED!'],
+  liquidator: ['FULLY LIQUIDATED!', 'MARGIN: ZERO!', 'POSITION DESTROYED!'],
+  sandwich: ['TOTALLY SANDWICHED!', 'MEV MAXIMUM!', 'FRONT-RUN TO DEATH!'],
+  arbbot: ['SPREAD: FATAL!', 'ARBITRAGED OUT!', 'RISK-FREE KILL!'],
+  flashbot: ['FLASH EXECUTED!', 'ATOMICALLY DESTROYED!', 'BLOCK: FINAL!'],
+  whalebot: ['WHALE SLAMMED!', 'TSUNAMI!', 'DEPTH CHARGE CRITICAL!'],
+  dcabot: ['COST AVERAGED OUT!', 'STACKED TO DEATH!', 'PATIENCE KILLS!'],
+  frontrunner: ['PRIORITY: LETHAL!', 'SPEED KILLS!', 'FIRST AND LAST!']
+};
 
 // ====================== WIN QUOTES ======================
 const WIN_QUOTES = {
