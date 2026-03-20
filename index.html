@@ -377,10 +377,56 @@
       .touch-actions { right: 8px; bottom: 8px; width: 160px; height: 130px; }
       .touch-action-btn { width: 50px; height: 50px; font-size: 11px; }
 
+      /* Online overlay mobile */
+      #online-overlay h2 { font-size: 1.3em; letter-spacing: 3px; }
+      .room-code-display { font-size: 1.8em; letter-spacing: 8px; }
+      .online-input { width: 160px; font-size: 1.2em; }
+      .invite-link-row { flex-direction: column; gap: 6px; }
+
       /* Mute button */
       .mute-btn { width: 32px; height: 32px; font-size: 14px; top: 8px; right: 8px; }
       .mode-switch-btn { font-size: 0.6em; padding: 4px 8px; top: 8px; left: 8px; }
     }
+
+    /* Online 2P overlay */
+    #online-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10,0,21,0.95); display: none; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 250;
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); gap: 12px;
+    }
+    #online-overlay.show { display: flex; }
+    #online-overlay h2 {
+      font-size: 1.8em; color: #00ffff; text-transform: uppercase;
+      letter-spacing: 6px; text-shadow: 0 0 20px rgba(0,255,255,0.4);
+    }
+    .online-status { color: #888; font-size: 0.85em; margin-bottom: 8px; }
+    .room-code-display {
+      font-size: 2.5em; font-weight: 900; letter-spacing: 12px; color: #ffd700;
+      text-shadow: 0 0 20px rgba(255,215,0,0.4);
+      font-family: monospace; padding: 8px 24px;
+      background: rgba(255,215,0,0.05); border: 2px solid rgba(255,215,0,0.2);
+      border-radius: 12px; cursor: pointer; user-select: all;
+    }
+    .room-code-display:hover { border-color: #ffd700; }
+    .online-input {
+      background: rgba(255,255,255,0.06); border: 2px solid #444; border-radius: 8px;
+      padding: 10px 20px; color: #fff; font-size: 1.4em; text-align: center;
+      outline: none; width: 200px; font-family: monospace; letter-spacing: 8px;
+      text-transform: uppercase;
+    }
+    .online-input:focus { border-color: #00ffff; }
+    .online-or { color: #555; font-size: 0.8em; letter-spacing: 3px; }
+    .invite-link-row { display: flex; gap: 8px; align-items: center; }
+    .invite-link-btn {
+      padding: 8px 20px; font-size: 0.8em; font-weight: bold; color: #fff;
+      background: linear-gradient(135deg, #00ffff, #0088aa); border: none; border-radius: 8px;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 1px;
+    }
+    .invite-link-btn:hover { transform: scale(1.03); box-shadow: 0 4px 15px rgba(0,255,255,0.3); }
+    .online-waiting { color: #ff69b4; animation: blink 1.5s ease infinite; }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .online-connected { color: #00ff9d; font-weight: bold; }
 
     /* Portrait orientation hint */
     #rotate-hint {
@@ -442,6 +488,7 @@
   <div class="mode-row">
     <button class="mode-btn active" data-mode="1p" onclick="setMode('1p')">1P vs AI</button>
     <button class="mode-btn" data-mode="2p" onclick="setMode('2p')">2P Local</button>
+    <button class="mode-btn" data-mode="online" onclick="setMode('online')">Online 2P</button>
     <button class="mode-btn" data-mode="training" onclick="setMode('training')">Training</button>
     <button class="mode-btn" data-mode="tournament" onclick="setMode('tournament')">Tournament</button>
   </div>
@@ -488,6 +535,31 @@
     <button class="pause-btn" onclick="confirmName()" style="border-color:#00ff9d;color:#00ff9d">Confirm</button>
     <button class="pause-btn" onclick="skipName()">Skip</button>
   </div>
+</div>
+
+<div id="online-overlay">
+  <h2>ONLINE 2P</h2>
+  <div class="online-status" id="online-status">Create a room or enter a code to join</div>
+  <div id="online-create-section">
+    <button class="pause-btn" onclick="onlineCreate()" style="border-color:#00ff9d;color:#00ff9d">Create Room</button>
+    <div class="online-or">OR</div>
+    <input class="online-input" id="join-code-input" type="text" maxlength="6" placeholder="CODE" />
+    <button class="pause-btn" onclick="onlineJoin()" style="border-color:#00ffff;color:#00ffff;margin-top:6px">Join Room</button>
+  </div>
+  <div id="online-room-section" style="display:none;text-align:center">
+    <div class="online-status">Room Code</div>
+    <div class="room-code-display" id="room-code-display" onclick="copyRoomCode()"></div>
+    <div class="invite-link-row" style="margin-top:10px;justify-content:center">
+      <button class="invite-link-btn" onclick="copyInviteLink()">Copy Invite Link</button>
+      <button class="invite-link-btn" onclick="shareInvite()" style="background:linear-gradient(135deg,#1da1f2,#0d8ecf)">Share</button>
+    </div>
+    <div class="online-waiting" id="online-waiting" style="margin-top:14px">Waiting for opponent...</div>
+  </div>
+  <div id="online-connected-section" style="display:none;text-align:center">
+    <div class="online-connected">Opponent connected!</div>
+    <div class="online-status" style="margin-top:6px">Select your fighter, then FIGHT</div>
+  </div>
+  <button class="pause-btn" onclick="onlineCancel()" style="margin-top:12px">Cancel</button>
 </div>
 
 <div id="pause-overlay">
@@ -638,6 +710,11 @@ function playSound(type, vol = 0.3) {
 // ====================== MODE ROUTING ======================
 const path = window.location.pathname.replace(/\/+$/, '').toLowerCase();
 const GAME_MODE = path.includes('botclash') ? 'bot' : path.includes('coinclash') ? 'coin' : 'landing';
+
+// If on landing page with ?join= param, redirect to coinclash with the param
+if (GAME_MODE === 'landing' && new URLSearchParams(location.search).get('join')) {
+  location.href = '/coinclash?join=' + new URLSearchParams(location.search).get('join');
+}
 
 if (GAME_MODE === 'landing') {
   document.getElementById('landing-overlay').classList.remove('hidden');
@@ -2405,13 +2482,18 @@ let p2SelectedFighter = null;
 function setMode(m) {
   gameMode = m;
   selectedFighter = null; p2SelectedFighter = null; enemyFighter = null;
+  onlineOpponentReady = false; remoteKeys = {};
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
-  document.getElementById('diff-row').style.display = (m === '2p' || m === 'training') ? 'none' : 'flex';
+  document.getElementById('diff-row').style.display = (m === '2p' || m === 'training' || m === 'online') ? 'none' : 'flex';
   document.getElementById('p2-hint').style.display = m === '2p' ? 'block' : 'none';
   const btn = document.getElementById('fight-btn');
   btn.disabled = true; btn.textContent = 'SELECT A FIGHTER';
   document.getElementById('fighter-preview').innerHTML = '';
   document.getElementById('moves-preview').innerHTML = '';
+  // Show online overlay
+  if (m === 'online') {
+    document.getElementById('online-overlay').classList.add('show');
+  }
   buildSelect();
   playSound('select', 0.2);
 }
@@ -2448,8 +2530,15 @@ function quitToSelect() {
   p2SelectedFighter = null;
   tournament = null;
   stopMusic();
+  // Disconnect online
+  if (gameMode === 'online' && onlineWs) {
+    onlineWs.send(JSON.stringify({ type: 'leave' }));
+    onlineWs.close(); onlineWs = null;
+    onlineSlot = -1; onlineRoom = ''; onlineOpponentReady = false; remoteKeys = {};
+  }
   document.getElementById('pause-overlay').classList.remove('show');
   document.getElementById('victory-overlay').classList.remove('show');
+  document.getElementById('online-overlay').classList.remove('show');
   gameState = STATE.SELECT;
   document.getElementById('select-overlay').classList.remove('hidden');
   if (isTouchDevice) document.getElementById('touch-controls').style.display = 'none';
@@ -2478,7 +2567,7 @@ function handleInput() {
       else if (keys['l']) p1.startMove('special');
     }
   }
-  // P2 uses arrows + numpad (only in 2P mode)
+  // P2 uses arrows + numpad (only in local 2P mode)
   if (gameMode === '2p' && p2.state !== 'ko' && p2.state !== 'finishable') {
     const canMove = ['idle','walk','jump'].includes(p2.state);
     const canAct = canMove || p2.state === 'crouch';
@@ -2496,6 +2585,27 @@ function handleInput() {
       else if (keys['1']) p2.startMove('punch');
       else if (keys['2']) p2.startMove('kick');
       else if (keys['3']) p2.startMove('special');
+    }
+  }
+  // Online 2P: apply remote inputs to P2
+  if (gameMode === 'online' && p2.state !== 'ko' && p2.state !== 'finishable') {
+    const rk = remoteKeys;
+    const canMove = ['idle','walk','jump'].includes(p2.state);
+    const canAct = canMove || p2.state === 'crouch';
+    p2.blocking = rk[' '] && canMove;
+    if (canMove && !p2.blocking) {
+      if (rk['a']) { p2.x -= p2.data.spd; if (p2.onGround) p2.state = 'walk'; }
+      else if (rk['d']) { p2.x += p2.data.spd; if (p2.onGround) p2.state = 'walk'; }
+      else if (p2.onGround && p2.state === 'walk') p2.state = 'idle';
+      if (rk['w'] && p2.onGround) { p2.vy = -11; p2.y -= 1; p2.state = 'jump'; }
+    }
+    if (rk['s'] && p2.onGround && canMove) p2.state = 'crouch';
+    else if (p2.state === 'crouch' && !rk['s']) p2.state = 'idle';
+    if (canAct) {
+      if (rk['j'] && rk['k'] && p1.state === 'finishable') { p2.finisherReady = true; p2.startMove('finisher'); }
+      else if (rk['j']) p2.startMove('punch');
+      else if (rk['k']) p2.startMove('kick');
+      else if (rk['l']) p2.startMove('special');
     }
   }
 }
@@ -2589,7 +2699,7 @@ function startRound() {
   gameState = STATE.INTRO;
   currentStage = pickStage();
   p1 = new Fighter(selectedFighter, W * 0.25, 1, false);
-  p2 = new Fighter(enemyFighter, W * 0.75, -1, gameMode === '1p');
+  p2 = new Fighter(enemyFighter, W * 0.75, -1, gameMode === '1p' || gameMode === 'tournament');
   if (gameMode === 'training') { p2.isAI = false; p2.trainingDummy = true; }
   projectiles = []; particles = [];
   screenShake = 0; screenFlash = 0; comboCount = 0; comboTimer = 0;
@@ -2654,8 +2764,8 @@ function showVictory() {
   spawnConfetti(W / 2, H / 3, p1Won ? 50 : 15);
   if (p1Won) playSound('announce', 0.4);
 
-  // Submit to global leaderboard (1P and tournament only)
-  if (gameMode === '1p' || gameMode === 'tournament') {
+  // Submit to global leaderboard
+  if (gameMode === '1p' || gameMode === 'tournament' || gameMode === 'online') {
     submitScore(p1Won, isPerfect, p1.totalDmgDealt, false);
   }
 
@@ -2671,6 +2781,12 @@ function rematch() {
   if (gameMode === 'tournament' && tournament) {
     roundNum = 1; p1Rounds = 0; p2Rounds = 0;
     advanceTournament();
+    return;
+  }
+  // Online mode: request rematch from opponent
+  if (gameMode === 'online' && onlineWs && onlineWs.readyState === 1) {
+    onlineWs.send(JSON.stringify({ type: 'rematch_request' }));
+    document.getElementById('victory-overlay').querySelector('.pause-btn').textContent = 'WAITING...';
     return;
   }
   // Re-pick random enemy
@@ -2696,6 +2812,7 @@ function gameLoop() {
     matchTimerAccum++;
     if (matchTimerAccum >= 60) { matchTimerAccum = 0; matchTimer--; if (matchTimer <= 0) endRound(p1.hp >= p2.hp); }
     handleInput();
+    if (gameMode === 'online' && frameCount % 3 === 0) sendOnlineInputs();
     p1.update(p2); p2.update(p1);
     updateProjectiles(); updateParticles();
     // Training mode: dummy regens, no KO
@@ -3148,6 +3265,13 @@ function selectFighter(f) {
   if (gameMode === '2p' && selectedFighter && selectedFighter.id !== f.id && !p2SelectedFighter) {
     p2SelectedFighter = f;
     enemyFighter = f;
+  } else if (gameMode === 'online') {
+    selectedFighter = f;
+    // Send selection to opponent
+    if (onlineWs && onlineWs.readyState === 1) {
+      onlineWs.send(JSON.stringify({ type: 'select', fighter: f.id }));
+    }
+    // Don't clear enemyFighter if opponent already picked
   } else {
     selectedFighter = f;
     p2SelectedFighter = null;
@@ -3200,19 +3324,36 @@ function selectFighter(f) {
     <div class="move-tag"><span class="key">J+K</span> ${selectedFighter.moves.finisher.name} <span class="dmg">${selectedFighter.moves.finisher.dmg}dmg</span></div>
   `;
   const btn = document.getElementById('fight-btn');
-  const ready = selectedFighter && (gameMode === '1p' || enemyFighter);
-  btn.disabled = !ready;
-  if (gameMode === '2p' && !enemyFighter) {
-    btn.textContent = 'P2: PICK YOUR FIGHTER';
+  if (gameMode === 'online') {
+    updateFightBtn();
   } else {
-    btn.textContent = `FIGHT${gameMode === '2p' ? '' : ' AS ' + selectedFighter.name.toUpperCase()}`;
+    const ready = selectedFighter && (gameMode === '1p' || enemyFighter);
+    btn.disabled = !ready;
+    if (gameMode === '2p' && !enemyFighter) {
+      btn.textContent = 'P2: PICK YOUR FIGHTER';
+    } else {
+      btn.textContent = `FIGHT${gameMode === '2p' ? '' : ' AS ' + selectedFighter.name.toUpperCase()}`;
+    }
   }
 }
 
 function startFight() {
   if (!selectedFighter) return;
   // Prompt for name on first game if not set
-  if (!playerName && (gameMode === '1p' || gameMode === 'tournament')) promptForName();
+  if (!playerName && (gameMode === '1p' || gameMode === 'tournament' || gameMode === 'online')) promptForName();
+  if (gameMode === 'online') {
+    if (!enemyFighter || !onlineWs) return;
+    // Tell opponent we're ready
+    onlineWs.send(JSON.stringify({ type: 'ready' }));
+    if (onlineOpponentReady) {
+      startOnlineFight();
+    } else {
+      // Wait for opponent's ready
+      const btn = document.getElementById('fight-btn');
+      btn.disabled = true; btn.textContent = 'WAITING FOR OPPONENT...';
+    }
+    return;
+  }
   document.getElementById('select-overlay').classList.add('hidden');
   if (gameMode === 'tournament') {
     startTournament();
@@ -3297,6 +3438,235 @@ function submitScore(won, perfect, dmg, tournamentWin) {
     })
   }).catch(() => {});
 }
+
+// ====================== ONLINE 2P ======================
+let onlineWs = null, onlineSlot = -1, onlineRoom = '', onlineOpponentReady = false;
+let remoteKeys = {}; // opponent's inputs
+const WS_URL = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/clash-ws';
+
+function onlineCreate() {
+  if (!playerName) { promptForName(); return; }
+  connectOnline('create');
+}
+function onlineJoin() {
+  if (!playerName) { promptForName(); return; }
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  if (code.length < 4) { document.getElementById('online-status').textContent = 'Enter a valid room code'; return; }
+  connectOnline('join', code);
+}
+
+function connectOnline(action, code) {
+  if (onlineWs) { onlineWs.close(); onlineWs = null; }
+  document.getElementById('online-status').textContent = 'Connecting...';
+  try {
+    onlineWs = new WebSocket(WS_URL);
+  } catch(e) {
+    document.getElementById('online-status').textContent = 'Connection failed';
+    return;
+  }
+  onlineWs.onopen = () => {
+    if (action === 'create') {
+      onlineWs.send(JSON.stringify({ type: 'create' }));
+    } else {
+      onlineWs.send(JSON.stringify({ type: 'join', code }));
+    }
+  };
+  onlineWs.onmessage = (e) => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    handleOnlineMsg(msg);
+  };
+  onlineWs.onclose = () => {
+    if (gameMode === 'online') {
+      document.getElementById('online-status').textContent = 'Disconnected';
+    }
+  };
+  onlineWs.onerror = () => {
+    document.getElementById('online-status').textContent = 'Connection error';
+  };
+}
+
+function handleOnlineMsg(msg) {
+  switch(msg.type) {
+    case 'created':
+      onlineSlot = msg.slot;
+      onlineRoom = msg.code;
+      document.getElementById('online-create-section').style.display = 'none';
+      document.getElementById('online-room-section').style.display = 'block';
+      document.getElementById('room-code-display').textContent = msg.code;
+      document.getElementById('online-status').textContent = 'Room created! Share the code:';
+      break;
+    case 'joined':
+      onlineSlot = msg.slot;
+      onlineRoom = msg.code;
+      document.getElementById('online-create-section').style.display = 'none';
+      document.getElementById('online-room-section').style.display = 'none';
+      document.getElementById('online-connected-section').style.display = 'block';
+      document.getElementById('online-status').textContent = 'Connected to room ' + msg.code;
+      // Close overlay after 1s and go to fighter select
+      setTimeout(() => {
+        document.getElementById('online-overlay').classList.remove('show');
+        document.getElementById('online-connected-section').style.display = 'none';
+      }, 1200);
+      break;
+    case 'opponent_joined':
+      document.getElementById('online-waiting').style.display = 'none';
+      document.getElementById('online-room-section').style.display = 'none';
+      document.getElementById('online-connected-section').style.display = 'block';
+      document.getElementById('online-status').textContent = 'Opponent joined!';
+      setTimeout(() => {
+        document.getElementById('online-overlay').classList.remove('show');
+        document.getElementById('online-connected-section').style.display = 'none';
+      }, 1200);
+      break;
+    case 'opponent_left':
+      if (gameState !== STATE.SELECT) {
+        announceText = 'OPPONENT LEFT'; announceTimer = 90; announceColor = '#ff4444';
+        setTimeout(quitToSelect, 2000);
+      } else {
+        document.getElementById('online-status').textContent = 'Opponent disconnected';
+      }
+      onlineWs = null; onlineSlot = -1;
+      break;
+    case 'select':
+      // Opponent selected their fighter
+      onlineOpponentReady = true;
+      const oppFighter = FIGHTERS.find(f => f.id === msg.fighter);
+      if (oppFighter) {
+        if (onlineSlot === 0) {
+          // We're host (P1), opponent is P2
+          enemyFighter = oppFighter;
+        } else {
+          // We're guest (P2), opponent is P1 — we play as P2 controls
+          enemyFighter = oppFighter;
+        }
+        buildSelect();
+        updateFightBtn();
+      }
+      break;
+    case 'ready':
+      // Opponent is ready to fight
+      if (selectedFighter && enemyFighter) {
+        startOnlineFight();
+      }
+      break;
+    case 'input':
+      // Opponent's input state
+      remoteKeys = msg.keys || {};
+      break;
+    case 'rematch_request':
+      // Opponent wants rematch
+      if (confirm('Opponent wants a rematch! Accept?')) {
+        onlineWs.send(JSON.stringify({ type: 'rematch_accept' }));
+        roundNum = 1; p1Rounds = 0; p2Rounds = 0;
+        document.getElementById('victory-overlay').classList.remove('show');
+        startRound();
+      }
+      break;
+    case 'rematch_accept':
+      roundNum = 1; p1Rounds = 0; p2Rounds = 0;
+      document.getElementById('victory-overlay').classList.remove('show');
+      startRound();
+      break;
+    case 'error':
+      document.getElementById('online-status').textContent = msg.msg || 'Error';
+      break;
+    case 'room_expired':
+      document.getElementById('online-status').textContent = 'Room expired';
+      onlineWs = null; onlineSlot = -1;
+      break;
+  }
+}
+
+function updateFightBtn() {
+  const btn = document.getElementById('fight-btn');
+  if (gameMode === 'online') {
+    if (selectedFighter && enemyFighter) {
+      btn.disabled = false;
+      btn.textContent = 'FIGHT ONLINE';
+    } else if (selectedFighter) {
+      btn.disabled = true;
+      btn.textContent = 'WAITING FOR OPPONENT...';
+    } else {
+      btn.disabled = true;
+      btn.textContent = 'SELECT A FIGHTER';
+    }
+  }
+}
+
+function startOnlineFight() {
+  document.getElementById('select-overlay').classList.add('hidden');
+  roundNum = 1; p1Rounds = 0; p2Rounds = 0;
+  startRound();
+  if (isTouchDevice) document.getElementById('touch-controls').style.display = 'block';
+}
+
+function copyRoomCode() {
+  navigator.clipboard.writeText(onlineRoom).catch(() => {});
+  const el = document.getElementById('room-code-display');
+  const orig = el.textContent;
+  el.textContent = 'COPIED!';
+  setTimeout(() => el.textContent = orig, 1000);
+}
+
+function copyInviteLink() {
+  const url = `${location.origin}/clash?join=${onlineRoom}`;
+  navigator.clipboard.writeText(url).catch(() => {});
+  document.getElementById('online-status').textContent = 'Invite link copied!';
+}
+
+function shareInvite() {
+  const url = `${location.origin}/clash?join=${onlineRoom}`;
+  const text = `Fight me in TinkClaw Clash! Join room ${onlineRoom}`;
+  if (navigator.share) {
+    navigator.share({ title: 'TinkClaw Clash', text, url }).catch(() => {});
+  } else {
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text + '\n' + url)}`, '_blank');
+  }
+}
+
+function onlineCancel() {
+  if (onlineWs) {
+    onlineWs.send(JSON.stringify({ type: 'leave' }));
+    onlineWs.close();
+    onlineWs = null;
+  }
+  onlineSlot = -1; onlineRoom = ''; onlineOpponentReady = false; remoteKeys = {};
+  document.getElementById('online-overlay').classList.remove('show');
+  // Reset overlay state
+  document.getElementById('online-create-section').style.display = 'block';
+  document.getElementById('online-room-section').style.display = 'none';
+  document.getElementById('online-connected-section').style.display = 'none';
+  document.getElementById('online-waiting').style.display = 'block';
+  document.getElementById('online-status').textContent = 'Create a room or enter a code to join';
+  setMode('1p');
+}
+
+// Send local inputs to opponent every frame during fight
+function sendOnlineInputs() {
+  if (gameMode !== 'online' || !onlineWs || onlineWs.readyState !== 1) return;
+  // Only send the keys we care about
+  const inputKeys = onlineSlot === 0
+    ? { a: !!keys['a'], d: !!keys['d'], w: !!keys['w'], s: !!keys['s'], j: !!keys['j'], k: !!keys['k'], l: !!keys['l'], ' ': !!keys[' '] }
+    : { a: !!keys['a'], d: !!keys['d'], w: !!keys['w'], s: !!keys['s'], j: !!keys['j'], k: !!keys['k'], l: !!keys['l'], ' ': !!keys[' '] };
+  onlineWs.send(JSON.stringify({ type: 'input', keys: inputKeys }));
+}
+
+// Check for ?join= param on load
+(function checkJoinParam() {
+  const params = new URLSearchParams(location.search);
+  const joinCode = params.get('join');
+  if (joinCode) {
+    // Auto-switch to online mode and join
+    setTimeout(() => {
+      setMode('online');
+      document.getElementById('join-code-input').value = joinCode.toUpperCase();
+      if (playerName) {
+        onlineJoin();
+      }
+    }, 500);
+  }
+})();
 
 // ====================== TOUCH CONTROLS ======================
 if (isTouchDevice) {
