@@ -163,6 +163,23 @@
     .mode-btn:hover { border-color: #ff1493; color: #ff69b4; }
     .mode-btn.active { border-color: #ff1493; color: #ff1493; background: rgba(255,20,147,0.08); box-shadow: 0 0 12px rgba(255,20,147,0.2); }
 
+    /* Modifier buttons */
+    .mod-row { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; justify-content: center; }
+    .mod-btn {
+      padding: 3px 10px; font-size: 0.65em; font-weight: bold; color: #666;
+      background: rgba(255,255,255,0.03); border: 1px solid #2a2a2a; border-radius: 20px;
+      cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .mod-btn:hover { border-color: #ffd700; color: #ffd700; }
+    .mod-btn.on { border-color: #ffd700; color: #ffd700; background: rgba(255,215,0,0.1); box-shadow: 0 0 10px rgba(255,215,0,0.15); }
+    .random-btn {
+      padding: 4px 16px; font-size: 0.75em; font-weight: bold; color: #ff69b4;
+      background: rgba(255,20,147,0.06); border: 1px dashed rgba(255,20,147,0.3); border-radius: 20px;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 1px;
+    }
+    .random-btn:hover { border-style: solid; background: rgba(255,20,147,0.12); transform: scale(1.05); }
+    .random-btn:active { transform: scale(0.95); }
+
     .mute-btn {
       position: fixed; top: 12px; right: 12px; z-index: 300;
       width: 36px; height: 36px; border-radius: 50%;
@@ -608,7 +625,18 @@
     <button class="reset-btn" onclick="resetStats()">Reset Stats</button>
     <button class="reset-btn" onclick="openLeaderboard()" style="background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000">Leaderboard</button>
   </div>
+  <div class="mod-row" id="mod-row">
+    <button class="mod-btn" data-mod="bighead" onclick="toggleMod('bighead')">Big Head</button>
+    <button class="mod-btn" data-mod="lowgrav" onclick="toggleMod('lowgrav')">Low Grav</button>
+    <button class="mod-btn" data-mod="turbo" onclick="toggleMod('turbo')">Turbo</button>
+    <button class="mod-btn" data-mod="ohko" onclick="toggleMod('ohko')">1-Hit KO</button>
+    <button class="mod-btn" data-mod="tiny" onclick="toggleMod('tiny')">Tiny</button>
+    <button class="mod-btn" data-mod="mirror" onclick="toggleMod('mirror')">Mirror</button>
+  </div>
   <div class="unlock-msg" id="unlock-msg"></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+    <button class="random-btn" onclick="pickRandom()">? RANDOM</button>
+  </div>
   <div class="roster" id="roster"></div>
   <div class="fighter-preview" id="fighter-preview"></div>
   <div class="moves-preview" id="moves-preview"></div>
@@ -616,7 +644,7 @@
   <div class="controls-hint" id="controls-hint">
     <span>A/D</span> Move &nbsp; <span>W</span> Jump &nbsp; <span>S</span> Crouch &nbsp;
     <span>J</span> Punch &nbsp; <span>K</span> Kick &nbsp; <span>L</span> Special &nbsp;
-    <span>Space</span> Block &nbsp; <span>J+K</span> Finisher (when FINISH HIM!) &nbsp; <span>Esc</span> Pause
+    <span>Space</span> Block &nbsp; <span>J+K</span> Finisher (when FINISH HIM!) &nbsp; <span>T</span> Taunt &nbsp; <span>Esc</span> Pause
   </div>
   <div class="p2-hint" id="p2-hint" style="display:none">
     P2: <span>Arrows</span> Move &nbsp; <span>Num1</span> Punch &nbsp; <span>Num2</span> Kick &nbsp; <span>Num3</span> Special &nbsp; <span>Num0</span> Block
@@ -702,7 +730,8 @@
     <div class="touch-dpad-btn t-left" data-key="a">&#9664;</div>
     <div class="touch-dpad-btn t-right" data-key="d">&#9654;</div>
   </div>
-  <div class="touch-pause-btn" id="touch-pause" onclick="togglePause()">| |</div>
+  <div class="touch-pause-btn" id="touch-pause" onclick="togglePause()" style="left:calc(50% + 30px)">| |</div>
+  <div class="touch-pause-btn" id="touch-taunt" onclick="if(p1&&selectedFighter&&gameState===2)doTaunt(selectedFighter,p1.x,p1.y)" style="left:calc(50% - 30px);border-color:rgba(255,215,0,0.3);color:rgba(255,215,0,0.4)">T</div>
   <div class="touch-zone touch-actions">
     <div class="touch-action-btn t-punch" data-key="j">P</div>
     <div class="touch-action-btn t-kick" data-key="k">K</div>
@@ -979,6 +1008,13 @@ function drawFighterBody(ctx, x, y, w, h, data, state, frame, facing, armExt, le
   const walkCycle = Math.sin(frame * 0.18) * (state === 'walk' ? 10 : 0);
   const crouchY = state === 'crouch' ? 15 : 0;
   const baseY = y + crouchY;
+
+  // Big head mode: scale entire fighter with pivot at feet
+  if (mods.bighead) {
+    ctx.translate(x, baseY);
+    ctx.scale(1.4, 1.4);
+    ctx.translate(-x, -baseY);
+  }
 
   // Character-specific rendering
   switch (data.id) {
@@ -1976,7 +2012,7 @@ class Fighter {
     // Landing detection
     const wasAir = this.wasInAir;
     if (!this.onGround) {
-      this.vy += 0.6; this.y += this.vy;
+      this.vy += mods.lowgrav ? 0.25 : 0.6; this.y += this.vy;
       this.wasInAir = true;
       if (this.y >= GROUND_Y) {
         this.y = GROUND_Y; this.vy = 0;
@@ -2611,6 +2647,24 @@ function drawHUD() {
     introDialogueTimer--;
   }
 
+  // Taunt bubble
+  if (tauntTimer > 0 && tauntText) {
+    const tAlpha = Math.min(1, tauntTimer / 15);
+    ctx.globalAlpha = tAlpha;
+    ctx.font = 'bold 14px Arial';
+    const tw = ctx.measureText(tauntText).width + 24;
+    const tx = Math.max(tw / 2 + 5, Math.min(W - tw / 2 - 5, tauntX));
+    const ty = tauntY - 50 - (80 - tauntTimer) * 0.5; // float upward
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.beginPath(); ctx.roundRect(tx - tw / 2, ty - 12, tw, 26, 10); ctx.fill();
+    ctx.strokeStyle = tauntColor + '66'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(tx - tw / 2, ty - 12, tw, 26, 10); ctx.stroke();
+    ctx.fillStyle = tauntColor; ctx.textAlign = 'center';
+    ctx.fillText(tauntText, tx, ty + 6);
+    ctx.globalAlpha = 1;
+    tauntTimer--;
+  }
+
   // Training mode frame data
   if (gameMode === 'training' && p1) {
     ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(5, 50, 180, 100);
@@ -2731,6 +2785,12 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (gameState >= STATE.INTRO && gameState <= STATE.FIGHT) togglePause();
   }
+  // Taunt: T key during fight
+  if (e.key.toLowerCase() === 't' && gameState === STATE.FIGHT && p1 && selectedFighter) {
+    doTaunt(selectedFighter, p1.x, p1.y);
+  }
+  // Konami code tracking
+  checkKonami(e.key.toLowerCase());
   ensureAudio();
 });
 document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -2920,9 +2980,15 @@ function tournamentMatchOver(p1Won) {
 function startRound() {
   gameState = STATE.INTRO;
   currentStage = pickStage();
+  // Mirror mode: both fighters are the same
+  const actualEnemy = mods.mirror ? selectedFighter : enemyFighter;
   p1 = new Fighter(selectedFighter, W * 0.25, 1, false);
-  p2 = new Fighter(enemyFighter, W * 0.75, -1, gameMode === '1p' || gameMode === 'tournament');
+  p2 = new Fighter(actualEnemy, W * 0.75, -1, gameMode === '1p' || gameMode === 'tournament');
   if (gameMode === 'training') { p2.isAI = false; p2.trainingDummy = true; }
+  // Apply modifiers
+  if (mods.ohko) { p1.hp = 1; p1.maxHp = 1; p1.displayHp = 1; p2.hp = 1; p2.maxHp = 1; p2.displayHp = 1; }
+  if (mods.tiny) { p1.w *= 0.5; p1.h *= 0.5; p2.w *= 0.5; p2.h *= 0.5; }
+  if (mods.turbo) { p1.data = { ...p1.data, spd: p1.data.spd * 1.8 }; p2.data = { ...p2.data, spd: p2.data.spd * 1.8 }; }
   projectiles = []; particles = [];
   screenShake = 0; screenFlash = 0; comboCount = 0; comboTimer = 0;
   matchTimer = 99; matchTimerAccum = 0;
@@ -2962,7 +3028,11 @@ function showVictory() {
   const titleEl = document.getElementById('victory-title');
   titleEl.textContent = `${winner.data.name.toUpperCase()} WINS!`;
   titleEl.style.color = p1Won ? '#00ff9d' : '#ff6b6b';
-  document.getElementById('victory-sub').textContent = p1Won ? (isPerfect ? 'FLAWLESS VICTORY' : 'VICTORY') : 'DEFEAT';
+  // Win quote
+  const winQuotes = WIN_QUOTES[winner.data.id] || ['GG!'];
+  const quote = winQuotes[Math.floor(Math.random() * winQuotes.length)];
+  document.getElementById('victory-sub').innerHTML = (p1Won ? (isPerfect ? 'FLAWLESS VICTORY' : 'VICTORY') : 'DEFEAT') +
+    `<div style="font-style:italic;color:${winner.data.color};font-size:0.85em;margin-top:4px">"${quote}"</div>`;
 
   // Record to career
   recordMatch(p1Won, isPerfect, p1.maxCombo, p1.totalDmgDealt);
@@ -3897,6 +3967,117 @@ function sendOnlineInputs() {
     }, 500);
   }
 })();
+
+// ====================== PARTY MODIFIERS ======================
+const mods = { bighead: false, lowgrav: false, turbo: false, ohko: false, tiny: false, mirror: false };
+function toggleMod(mod) {
+  mods[mod] = !mods[mod];
+  document.querySelectorAll('.mod-btn').forEach(b => b.classList.toggle('on', mods[b.dataset.mod]));
+  playSound('select', 0.15);
+}
+
+// Random fighter picker
+function pickRandom() {
+  const bossOpen = isBossUnlocked();
+  const pool = FIGHTERS.filter(f => !f.boss || bossOpen);
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  // Animate through a few before landing
+  let count = 0;
+  const interval = setInterval(() => {
+    const temp = pool[Math.floor(Math.random() * pool.length)];
+    selectFighter(temp);
+    playSound('select', 0.1);
+    count++;
+    if (count >= 8) {
+      clearInterval(interval);
+      selectFighter(pick);
+      playSound('announce', 0.25);
+    }
+  }, 80);
+}
+
+// ====================== TAUNTS ======================
+const TAUNTS = {
+  doge: ['Much skill. Very win.', 'Wow. Such power.', 'To the moon, loser!'],
+  pepe: ['Feels good man.', 'Ultra rare combo!', 'You got memed.'],
+  shib: ['Can\'t catch me!', 'Speed kills!', 'Zoom zoom!'],
+  bonk: ['BONK!', 'Go to horny jail!', 'Hammer time!'],
+  wif: ['Hat trick incoming!', '*tips hat*', 'Fashion > Fighting.'],
+  floki: ['VALHALLA AWAITS!', 'Viking fury!', 'Axe goes brrr.'],
+  trump: ['Tremendous fight!', 'I\'m winning bigly!', 'You\'re fired!'],
+  samo: ['Solana speed, baby!', 'Much wow, such L.', 'Good boy wins!'],
+  tinkclaw: ['I see all futures.', 'Predicted that.', 'Neural net says: L.'],
+  snipebot: ['Target acquired.', 'First in, first out.', '0.001s reaction.'],
+  gridbot: ['Buy low, sell high.', 'Range bound!', 'Systematic win.'],
+  liquidator: ['Liquidated!', 'Margin called.', 'Rekt.'],
+  sandwich: ['Front-run that!', 'Sandwiched!', 'MEV extracted.'],
+  arbbot: ['Arbitraged!', 'Free money.', 'Delta neutral W.'],
+  flashbot: ['Bundled!', 'Private mempool.', 'Block 1, position 0.'],
+  whalebot: ['Splash!', 'Market moved.', 'Whale alert!'],
+  dcabot: ['Patience wins.', 'Stacking sats.', 'Time in > Timing.'],
+  frontrunner: ['Always first.', 'Priority fee: max.', 'Speed is king.']
+};
+
+let tauntText = '', tauntTimer = 0, tauntX = 0, tauntY = 0, tauntColor = '#fff';
+let canTaunt = true;
+
+function doTaunt(fighter, px, py) {
+  if (!canTaunt || tauntTimer > 0) return;
+  const taunts = TAUNTS[fighter.id] || ['Nice try!', 'Ha!', 'Too easy.'];
+  tauntText = taunts[Math.floor(Math.random() * taunts.length)];
+  tauntTimer = 80;
+  tauntX = px; tauntY = py;
+  tauntColor = fighter.color;
+  canTaunt = false;
+  setTimeout(() => canTaunt = true, 3000); // 3s cooldown
+  playSound('select', 0.2);
+}
+
+// ====================== WIN QUOTES ======================
+const WIN_QUOTES = {
+  doge: ['Wow. Such victory. Much champion.', 'To the moon and beyond!', 'Very fight. Much win.'],
+  pepe: ['Rare victory! Screenshot this.', 'Feels good man. Real good.', 'You just got ultra-rared.'],
+  shib: ['Fast and furious!', 'Can\'t stop won\'t stop!', 'Speed demon wins again.'],
+  bonk: ['BONK! Go sit down.', 'Hammer of justice!', 'Bonked into next block.'],
+  wif: ['Hat stays ON.', 'Fashionably victorious.', 'Dog with a hat > You.'],
+  floki: ['Odin smiles upon me!', 'Viking blood runs deep.', 'Valhalla earned!'],
+  trump: ['That was tremendous!', 'We\'re making fighting great again!', 'Nobody wins like me!'],
+  samo: ['Good boy always wins!', 'Solana speed supremacy.', 'Sol fam stays winning.'],
+  tinkclaw: ['All outcomes predicted.', 'The neural net is undefeated.', 'Resistance is futile.'],
+  snipebot: ['Target eliminated.', 'Perfect execution.', 'Precision wins.'],
+  gridbot: ['Systematic domination.', 'Range: dominated.', 'Grid always wins.'],
+  liquidator: ['Position: liquidated.', 'Your HP got margin called.', 'Rekt beyond recovery.'],
+  sandwich: ['Front-run, back-run, done.', 'Sandwiched and served.', 'MEV: Maximum Elimination Value.'],
+  arbbot: ['Risk-free victory.', 'Arbitrage complete.', 'Spread: captured.'],
+  flashbot: ['Block producer privilege.', 'Included in winning block.', 'Bundle accepted.'],
+  whalebot: ['The market follows ME.', 'Whale wins. Always.', 'Splash damage critical.'],
+  dcabot: ['Consistency is key.', 'Dollar cost averaging wins life.', 'Patience over panic.'],
+  frontrunner: ['First place. As always.', 'Priority: maximum.', 'Speed is the ultimate weapon.']
+};
+
+// ====================== KONAMI CODE EASTER EGG ======================
+let konamiSeq = [];
+const KONAMI = ['arrowup','arrowup','arrowdown','arrowdown','arrowleft','arrowright','arrowleft','arrowright','b','a'];
+let konamiUnlocked = localStorage.getItem('clash_konami') === '1';
+
+function checkKonami(key) {
+  konamiSeq.push(key);
+  if (konamiSeq.length > 10) konamiSeq.shift();
+  if (konamiSeq.length === 10 && konamiSeq.every((k, i) => k === KONAMI[i])) {
+    if (!konamiUnlocked) {
+      konamiUnlocked = true;
+      localStorage.setItem('clash_konami', '1');
+      // Enable all modifiers at once
+      Object.keys(mods).forEach(m => mods[m] = true);
+      document.querySelectorAll('.mod-btn').forEach(b => b.classList.add('on'));
+      announceText = 'PARTY MODE!'; announceTimer = 100; announceColor = '#ffd700';
+      playSound('finisher', 0.5);
+      // Confetti!
+      if (typeof spawnConfetti === 'function') spawnConfetti(W / 2, H / 3, 60);
+    }
+    konamiSeq = [];
+  }
+}
 
 // ====================== VOICE INPUT ======================
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
